@@ -1,0 +1,148 @@
+# =================================================================
+# QEMU ROBOTICS EMULATION BUILD CONFIGURATION
+# =================================================================
+# This configuration is optimized for QEMU virtual machine development
+# and testing of robotics applications without physical hardware.
+#
+# Key features:
+# - Virtual ARM64 machine emulation
+# - Development and debugging tools
+# - Network connectivity for remote access
+# - Software testing environment
+# - CI/CD pipeline compatibility
+#
+# Use cases:
+# - Algorithm development and testing
+# - Software integration testing
+# - Multi-platform compatibility verification
+# - Training and educational purposes
+# - CI/CD automated testing
+# =================================================================
+
+# =================================================================
+# MACHINE SELECTION
+# =================================================================
+# Target QEMU ARM64 virtual machine for robotics emulation
+# Provides software testing without physical hardware constraints
+MACHINE ?= "qemu-robotics"
+
+# =================================================================
+# DEVELOPMENT FEATURES
+# =================================================================
+# Enable comprehensive development features for testing
+# - debug-tweaks: Development conveniences and root access
+EXTRA_IMAGE_FEATURES += "debug-tweaks"
+
+# Install bash shell for better scripting and development
+IMAGE_INSTALL:append = " bash"
+
+# =================================================================
+# QEMU EMULATION SETTINGS
+# =================================================================
+# Configure QEMU runtime options for development
+# - serial stdio: Console output to terminal
+# - vga none: Disable graphics for headless operation
+QB_OPT_APPEND = "-serial stdio -vga none"
+
+# =================================================================
+# QEMU HOST INTEGRATION
+# =================================================================
+# Enable SDL support for QEMU graphics (if needed)
+# Useful for applications that require display testing
+PACKAGECONFIG:append:pn-qemu-native = " sdl"
+PACKAGECONFIG:append:pn-nativesdk-qemu = " sdl"
+
+# =================================================================
+# PACKAGE MANAGEMENT
+# =================================================================
+# Use RPM for consistent package management across platforms
+PACKAGE_CLASSES ?= "package_rpm"
+
+# =================================================================
+# DEVELOPMENT AND DEBUGGING TOOLS
+# =================================================================
+# Include comprehensive development toolset for robotics testing
+# - tools-debug: Debugging tools (gdb, strace, etc.)
+# - tools-sdk: Software development kit tools
+# - dev-pkgs: Development packages and headers
+# - ssh-server-openssh: Remote access for development
+IMAGE_FEATURES:append = " tools-debug tools-sdk dev-pkgs ssh-server-openssh"
+
+# =================================================================
+# BUILD PERFORMANCE OPTIMIZATION
+# =================================================================
+# Optimize build performance for development workstations
+# Uses all available CPU cores for compilation
+BB_NUMBER_THREADS ?= "\\${@oe.utils.cpu_count()}"
+PARALLEL_MAKE ?= "-j \\${@oe.utils.cpu_count()}"
+
+# =================================================================
+# ADVANCED DEBUGGING AND DEVELOPMENT TOOLS
+# =================================================================
+# Install additional tools for robotics application development
+# - strace: System call tracing for debugging
+# - gdbserver: Remote debugging support
+# - openssh-sftp-server: File transfer support
+IMAGE_INSTALL:append = " strace gdbserver openssh-sftp-server"
+
+# =================================================================
+# QEMU-SPECIFIC OPTIMIZATIONS
+# =================================================================
+# Additional configurations for QEMU development environment
+
+# Enable networking for package installation and remote access
+DISTRO_FEATURES:append = " wifi bluetooth"
+
+# Configure for faster QEMU boot and operation
+QEMU_TARGETS = "arm aarch64"
+
+# Set memory allocation for QEMU virtual machine
+QB_MEM = "512M"
+
+# Enable KVM acceleration if available on host
+QB_MACHINE = "-machine virt"
+QB_CPU = "-cpu cortex-a57"
+
+# =================================================================
+# ROBOTICS APPLICATION TESTING
+# =================================================================
+# Configure for robotics software testing in emulation
+
+# Enable OpenCV for computer vision algorithm testing
+PACKAGECONFIG:append:pn-opencv = " python3"
+PACKAGECONFIG:append:pn-opencv = " gtk"
+
+# Install Python packages commonly used in robotics
+IMAGE_INSTALL:append = " python3-numpy python3-scipy python3-matplotlib"
+
+# Add network utilities for testing communication protocols
+IMAGE_INSTALL:append = " curl wget netcat socat"
+
+# =================================================================
+# TESTING AND VALIDATION TOOLS
+# =================================================================
+# Tools for automated testing and validation
+
+# Unit testing frameworks
+IMAGE_INSTALL:append = " python3-pytest python3-unittest"
+
+# Performance monitoring tools
+IMAGE_INSTALL:append = " htop iotop sysstat"
+
+# Network debugging tools
+IMAGE_INSTALL:append = " tcpdump wireshark-cli nmap"
+
+# =================================================================
+# QEMU USAGE INSTRUCTIONS
+# =================================================================
+# To run the built image:
+# 1. Build: bitbake robotics-image
+# 2. Run: runqemu qemu-robotics robotics-image
+# 3. Access via SSH (if networking is configured)
+# 4. Console access is available via the terminal
+#
+# For network access from host:
+# - QEMU provides NAT networking by default
+# - SSH to localhost:2222 (port forwarding)
+# - Or configure bridge networking for direct access
+# =================================================================

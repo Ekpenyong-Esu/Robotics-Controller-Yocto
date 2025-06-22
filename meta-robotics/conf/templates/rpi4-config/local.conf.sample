@@ -1,0 +1,191 @@
+# =================================================================
+# RASPBERRY PI 4 ROBOTICS BUILD CONFIGURATION
+# =================================================================
+# This configuration is optimized specifically for Raspberry Pi 4
+# hardware with robotics applications requiring computer vision,
+# high-performance computing, and advanced connectivity.
+#
+# Key features enabled:
+# - Real-time kernel support for deterministic timing
+# - Hardware interfaces: GPIO, I2C, SPI, UART, PWM
+# - Camera interface (CSI) for computer vision
+# - Wi-Fi 802.11ac and Bluetooth 5.0 connectivity
+# - VideoCore VI GPU for hardware acceleration
+# - Hardware video encoding/decoding (H.264, H.265)
+# - USB 3.0 support for high-speed peripherals
+# - Gigabit Ethernet for high-bandwidth networking
+# - Development tools and SSH access
+#
+# To use this configuration:
+# 1. Copy to build directory: cp local.conf.sample build/conf/local.conf
+# 2. Customize as needed for your specific robotics application
+# 3. Remove debug features for production deployment
+# =================================================================
+
+# =================================================================
+# MACHINE CONFIGURATION
+# =================================================================
+# Set the target hardware platform to Raspberry Pi 4
+MACHINE ?= "rpi4-robotics"
+
+# =================================================================
+# DISTRIBUTION CONFIGURATION
+# =================================================================
+# Use Poky distribution (default Yocto reference distribution)
+DISTRO ?= "poky"
+
+# =================================================================
+# BUILD DIRECTORIES
+# =================================================================
+# Configure shared state and download directories for build caching
+# Adjust these paths as needed for your development environment
+DL_DIR ?= "${TOPDIR}/downloads"
+SSTATE_DIR ?= "${TOPDIR}/sstate-cache"
+
+# =================================================================
+# PARALLEL BUILD CONFIGURATION
+# =================================================================
+# Configure parallel builds based on your host system capabilities
+# RPi4 builds can be more resource-intensive due to advanced features
+# Adjust these values based on your CPU cores and available RAM
+BB_NUMBER_THREADS ?= "4"
+PARALLEL_MAKE ?= "-j 6"
+
+# =================================================================
+# PACKAGE MANAGEMENT
+# =================================================================
+# Use RPM for package management (alternatively: deb, ipk, or tar)
+PACKAGE_CLASSES ?= "package_rpm"
+
+# =================================================================
+# IMAGE FEATURES FOR DEVELOPMENT
+# =================================================================
+# Enable features useful for robotics development and testing
+# Remove or comment out debug features for production builds
+EXTRA_IMAGE_FEATURES ?= "debug-tweaks tools-debug tools-sdk ssh-server-openssh"
+
+# =================================================================
+# GPU MEMORY CONFIGURATION
+# =================================================================
+# Allocate memory for VideoCore VI GPU (RPi4 has more RAM than RPi3)
+# This enables advanced hardware video acceleration for computer vision
+# Values: 16, 32, 64, 128, 256, 512 (MB)
+# RPi4 can handle larger GPU memory allocations
+GPU_MEM = "128"
+
+# =================================================================
+# HARDWARE INTERFACES
+# =================================================================
+# Enable UART interface on GPIO pins for communication with sensors
+ENABLE_UART = "1"
+
+# Enable I2C interface for sensor communication
+ENABLE_I2C = "1"
+
+# Enable SPI interface for high-speed peripheral communication
+ENABLE_SPI = "1"
+
+# =================================================================
+# REAL-TIME KERNEL FEATURES
+# =================================================================
+# Enable real-time kernel features for deterministic robotics applications
+PREFERRED_PROVIDER_virtual/kernel = "linux-raspberrypi-rt"
+
+# =================================================================
+# WIRELESS CONFIGURATION
+# =================================================================
+# Enable Wi-Fi and Bluetooth support (RPi4 has advanced wireless capabilities)
+DISTRO_FEATURES:append = " wifi bluetooth"
+
+# =================================================================
+# SYSTEMD CONFIGURATION
+# =================================================================
+# Use systemd as the init system (recommended for robotics applications)
+DISTRO_FEATURES:append = " systemd"
+VIRTUAL-RUNTIME_init_manager = "systemd"
+DISTRO_FEATURES_BACKFILL_CONSIDERED += "sysvinit"
+VIRTUAL-RUNTIME_initscripts = ""
+
+# =================================================================
+# USB 3.0 OPTIMIZATION
+# =================================================================
+# Enable USB 3.0 support for high-speed robotics peripherals
+# This allows connection of advanced cameras, LiDAR, and other sensors
+MACHINE_FEATURES:append = " usbhost"
+
+# =================================================================
+# ADDITIONAL ROBOTICS PACKAGES
+# =================================================================
+# Add essential packages for robotics development
+# RPi4 can handle more intensive packages due to better performance
+IMAGE_INSTALL:append = " \
+    python3 \
+    python3-pip \
+    opencv \
+    python3-opencv \
+    i2c-tools \
+    spi-tools \
+    gpio-utils \
+    git \
+    cmake \
+    nano \
+    htop \
+    gstreamer1.0 \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    v4l-utils \
+"
+
+# =================================================================
+# USER CONFIGURATION
+# =================================================================
+# Set root password for development (change for production!)
+EXTRA_USERS_PARAMS = "usermod -P robotics root;"
+
+# =================================================================
+# DISK SPACE MONITORING
+# =================================================================
+# Monitor disk space during build to prevent build failures
+BB_DISKMON_DIRS ??= "\
+    STOPTASKS,${TMPDIR},1G,100K \
+    STOPTASKS,${DL_DIR},1G,100K \
+    STOPTASKS,${SSTATE_DIR},1G,100K \
+    STOPTASKS,/tmp,100M,100K \
+    ABORT,${TMPDIR},100M,1K \
+    ABORT,${DL_DIR},100M,1K \
+    ABORT,${SSTATE_DIR},100M,1K \
+    ABORT,/tmp,10M,1K"
+
+# =================================================================
+# OPTIMIZATION FLAGS
+# =================================================================
+# Enable performance optimizations for RPi4 ARM Cortex-A72
+# These flags optimize for the specific ARM architecture
+DEFAULTTUNE = "cortexa72"
+
+# =================================================================
+# ADVANCED FEATURES
+# =================================================================
+# Enable advanced features available on RPi4
+
+# Hardware-accelerated video encoding/decoding
+VIDEO_CAMERA = "1"
+
+# Enable dual display support
+ENABLE_DPI_LCD = "1"
+
+# =================================================================
+# DEVELOPMENT FEATURES
+# =================================================================
+# Remove these lines for production builds
+
+# Enable source packages for debugging
+INHERIT += "archiver"
+ARCHIVER_MODE[src] = "original"
+
+# Enable build statistics collection
+INHERIT += "buildstats"
+
+# Enable build history for package analysis
+INHERIT += "buildhistory"
+BUILDHISTORY_COMMIT = "1"

@@ -1,0 +1,126 @@
+# =================================================================
+# BEAGLEBONE BLACK ROBOTICS BUILD CONFIGURATION
+# =================================================================
+# This configuration is optimized specifically for BeagleBone Black
+# hardware with robotics applications requiring real-time performance.
+#
+# Key features enabled:
+# - Real-time kernel (PREEMPT_RT) for deterministic timing
+# - Hardware interfaces: GPIO, I2C, SPI, UART, PWM, ADC
+# - PRU (Programmable Real-time Unit) support
+# - Development tools and SSH access
+# - USB host support for external devices
+#
+# To use this configuration:
+# 1. Copy to build directory: cp local.conf.sample build/conf/local.conf
+# 2. Customize as needed for your specific robotics application
+# 3. Remove debug features for production deployment
+# =================================================================
+
+# =================================================================
+# MACHINE SELECTION
+# =================================================================
+# Target BeagleBone Black with robotics cape configuration
+# This machine definition includes all hardware interfaces needed
+# for robotics applications with optimized device tree
+MACHINE ?= "beaglebone-robotics"
+
+# =================================================================
+# PACKAGE MANAGEMENT
+# =================================================================
+# Use RPM for package management on embedded systems
+# Provides robust dependency resolution and upgrade capabilities
+PACKAGE_CLASSES ?= "package_rpm"
+
+# =================================================================
+# DEVELOPMENT IMAGE FEATURES
+# =================================================================
+# Enable features for development and debugging (remove for production)
+# - debug-tweaks: Root access without password, development tools
+# - ssh-server-openssh: Remote access via SSH for development
+# - tools-debug: Debugging and profiling tools (gdb, strace, etc.)
+IMAGE_FEATURES:append = " debug-tweaks ssh-server-openssh tools-debug"
+
+# =================================================================
+# BEAGLEBONE HARDWARE FEATURES
+# =================================================================
+# Enable BeagleBone-specific hardware capabilities
+# - usbhost: USB host support for external devices
+# - rtc: Real-time clock support (external I2C RTC modules)
+# - i2c: I2C bus support for sensors
+# - spi: SPI interface for high-speed devices
+# - gpio: GPIO control for actuators and sensors
+MACHINE_FEATURES:append = " usbhost rtc i2c spi gpio"
+
+# =================================================================
+# REAL-TIME KERNEL CONFIGURATION
+# =================================================================
+# Use the real-time kernel with PREEMPT_RT patches
+# Essential for robotics applications requiring deterministic timing
+# such as motor control loops and sensor sampling
+PREFERRED_PROVIDER_virtual/kernel = "linux-yocto-rt"
+PREFERRED_VERSION_linux-yocto-rt = "5.15%"
+
+# =================================================================
+# BUILD PERFORMANCE OPTIMIZATION
+# =================================================================
+# Optimize build performance for development workstations
+# Uses all available CPU cores for compilation
+BB_NUMBER_THREADS ?= "\\${@oe.utils.cpu_count()}"
+PARALLEL_MAKE ?= "-j \\${@oe.utils.cpu_count()}"
+
+# =================================================================
+# WIRELESS COMMUNICATION FEATURES
+# =================================================================
+# Enable wireless capabilities for remote robotics operation
+# - wifi: Wi-Fi support for remote control and monitoring
+# - bluetooth: Bluetooth for local device communication
+# Note: BeagleBone Black requires external USB adapters for wireless
+DISTRO_FEATURES:append = " wifi bluetooth"
+
+# =================================================================
+# DEVELOPMENT USER CONFIGURATION (REMOVE FOR PRODUCTION)
+# =================================================================
+# Set root password to "robotics" for development convenience
+# WARNING: Security risk - remove for production deployment!
+EXTRA_USERS_PARAMS = "usermod -P robotics root;"
+
+# =================================================================
+# BEAGLEBONE-SPECIFIC OPTIMIZATIONS
+# =================================================================
+# Additional optimizations for BeagleBone Black robotics applications
+
+# Enable PRU (Programmable Real-time Unit) support
+# PRUs provide ultra-low latency I/O for critical robotics tasks
+MACHINE_FEATURES:append = " pru"
+
+# Configure for eMMC storage deployment
+# BeagleBone Black has 4GB eMMC for reliable embedded storage
+PREFERRED_PROVIDER_virtual/bootloader = "u-boot"
+
+# Enable hardware-specific device tree
+# Includes robotics cape pin configurations and interface enables
+KERNEL_DEVICETREE = "am335x-boneblack-robotics.dtb"
+
+# =================================================================
+# ROBOTICS APPLICATION SETTINGS
+# =================================================================
+# Configure OpenCV for computer vision applications
+PACKAGECONFIG:append:pn-opencv = " python3"
+PACKAGECONFIG:append:pn-opencv = " gtk"
+
+# Enable systemd for service management
+DISTRO_FEATURES:append = " systemd"
+VIRTUAL-RUNTIME_init_manager = "systemd"
+
+# =================================================================
+# PRODUCTION DEPLOYMENT NOTES
+# =================================================================
+# For production deployment, modify this configuration:
+# 1. Remove "debug-tweaks" from IMAGE_FEATURES
+# 2. Remove "tools-debug" from IMAGE_FEATURES
+# 3. Remove or change EXTRA_USERS_PARAMS
+# 4. Consider read-only root filesystem
+# 5. Enable security hardening features
+# 6. Remove unnecessary development packages
+# =================================================================

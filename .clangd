@@ -1,0 +1,15 @@
+CompileFlags:
+  Remove: [-W*, -w]  # Disable noisy warnings for editor experience
+  Add:
+    # Main build directory (contains generated opencv2/opencv_modules.hpp)
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build
+    # OpenCV source includes
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/modules/core/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/modules/imgproc/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/modules/imgcodecs/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/modules/videoio/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/modules/dnn/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-src/include
+    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/opencv-build
+    - -DHAVE_OPENCV
+    - -std=c++17

@@ -1,0 +1,173 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Robotics Developer <dev@robotics.example>
+Date: Fri, 13 Jun 2025 10:00:00 +0000
+Subject: [PATCH] Add BeagleBone Black robotics device tree
+
+This patch adds a device tree for the BeagleBone Black robotics
+controller, enabling all required interfaces (GPIO, I2C, SPI, PWM, ADC).
+
+Signed-off-by: Robotics Developer <dev@robotics.example>
+---
+ arch/arm/boot/dts/am335x-boneblack-robotics.dts | 150 ++++++++++++++++++
+ 1 file changed, 150 insertions(+)
+ create mode 100644 arch/arm/boot/dts/am335x-boneblack-robotics.dts
+
+diff --git a/arch/arm/boot/dts/am335x-boneblack-robotics.dts b/arch/arm/boot/dts/am335x-boneblack-robotics.dts
+new file mode 100644
+index 0000000000000..1111111111111
+--- /dev/null
++++ b/arch/arm/boot/dts/am335x-boneblack-robotics.dts
+@@ -0,0 +1,150 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (C) 2025 Robotics Controller Project
++ *
++ * Device tree for BeagleBone Black with robotics cape
++ */
++
++/dts-v1/;
++
++#include "am335x-boneblack.dts"
++
++/ {
++	model = "TI AM335x BeagleBone Black Robotics Controller";
++	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
++
++	/* Status LEDs */
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&robotics_led_pins>;
++
++		status_led {
++			label = "status_led";
++			gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++	};
++
++	/* GPIO keys for robot control */
++	gpio-keys {
++		compatible = "gpio-keys";
++		pinctrl-names = "default";
++		pinctrl-0 = <&robotics_button_pins>;
++
++		control_button {
++			label = "control_button";
++			gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_PROG1>;
++			debounce-interval = <20>;
++		};
++	};
++};
++
++&am33xx_pinmux {
++	/* GPIO LED pins */
++	robotics_led_pins: robotics-led-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_GPMC_AD13, PIN_OUTPUT, MUX_MODE7)	/* gpmc_ad13.gpio1_13 */
++		>;
++	};
++
++	/* GPIO Button pins */
++	robotics_button_pins: robotics-button-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_GPMC_AD15, PIN_INPUT_PULLUP, MUX_MODE7) /* gpmc_ad15.gpio1_15 */
++			AM33XX_PADCONF(AM335X_PIN_GPMC_AD17, PIN_INPUT_PULLUP, MUX_MODE7) /* gpmc_ad17.gpio1_17 */
++			AM33XX_PADCONF(AM335X_PIN_GPMC_AD19, PIN_INPUT_PULLUP, MUX_MODE7) /* gpmc_ad19.gpio1_19 */
++		>;
++	};
++
++	/* I2C pins - use dedicated I2C1 pins */
++	robotics_i2c1_pins: robotics-i2c1-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_UART0_CTSN, PIN_INPUT_PULLUP, MUX_MODE3) /* uart0_ctsn.i2c1_sda */
++			AM33XX_PADCONF(AM335X_PIN_UART0_RTSN, PIN_INPUT_PULLUP, MUX_MODE3) /* uart0_rtsn.i2c1_scl */
++		>;
++	};
++
++	/* SPI pins */
++	robotics_spi0_pins: robotics-spi0-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_SPI0_SCLK, PIN_INPUT_PULLUP, MUX_MODE0) /* spi0_sclk.spi0_sclk */
++			AM33XX_PADCONF(AM335X_PIN_SPI0_D0, PIN_INPUT_PULLUP, MUX_MODE0) /* spi0_d0.spi0_miso */
++			AM33XX_PADCONF(AM335X_PIN_SPI0_D1, PIN_OUTPUT_PULLUP, MUX_MODE0) /* spi0_d1.spi0_mosi */
++			AM33XX_PADCONF(AM335X_PIN_SPI0_CS0, PIN_OUTPUT_PULLUP, MUX_MODE0) /* spi0_cs0.spi0_cs0 */
++		>;
++	};
++
++	/* PWM pins for motors */
++	robotics_pwm_pins: robotics-pwm-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_GPMC_A2, PIN_OUTPUT, MUX_MODE6) /* gpmc_a2.ehrpwm1a */
++			AM33XX_PADCONF(AM335X_PIN_GPMC_A3, PIN_OUTPUT, MUX_MODE6) /* gpmc_a3.ehrpwm1b */
++		>;
++	};
++
++	/* UART1 pins for GPS */
++	robotics_uart1_pins: robotics-uart1-pins {
++		pinctrl-single,pins = <
++			AM33XX_PADCONF(AM335X_PIN_UART1_RXD, PIN_INPUT_PULLUP, MUX_MODE0) /* uart1_rxd.uart1_rxd */
++			AM33XX_PADCONF(AM335X_PIN_UART1_TXD, PIN_OUTPUT_PULLDOWN, MUX_MODE0) /* uart1_txd.uart1_txd */
++		>;
++	};
++};
++
++/* Enable I2C1 for sensors */
++&i2c1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robotics_i2c1_pins>;
++	clock-frequency = <400000>;
++
++	/* VL53L0X Time-of-Flight sensor */
++	vl53l0x@29 {
++		compatible = "st,vl53l0x";
++		reg = <0x29>;
++	};
++};
++
++/* Enable SPI0 for IMU */
++&spi0 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robotics_spi0_pins>;
++
++	/* MPU-9250 IMU sensor */
++	mpu9250@0 {
++		compatible = "invensense,mpu9250";
++		reg = <0>;
++		spi-max-frequency = <1000000>;
++	};
++};
++
++/* Enable UART1 for GPS */
++&uart1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robotics_uart1_pins>;
++};
++
++/* Enable PWM for motor control */
++&epwmss1 {
++	status = "okay";
++};
++
++&ehrpwm1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robotics_pwm_pins>;
++};
++
++/* Enable ADC for line sensors */
++&tscadc {
++	status = "okay";
++	adc {
++		ti,adc-channels = <0 1 2 3 4 5 6 7>;
++		ti,chan-step-avg = <16 16 16 16 16 16 16 16>;
++		ti,chan-step-opendelay = <0x98 0x98 0x98 0x98 0x98 0x98 0x98 0x98>;
++		ti,chan-step-sampledelay = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
++	};
++};
+--
+2.25.1

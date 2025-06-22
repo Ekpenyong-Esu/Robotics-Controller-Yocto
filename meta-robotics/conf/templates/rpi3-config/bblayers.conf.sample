@@ -1,0 +1,69 @@
+# =================================================================
+# RASPBERRY PI 3 LAYERS CONFIGURATION
+# =================================================================
+# This configuration includes all layers needed for Raspberry Pi 3
+# robotics applications with computer vision and wireless capabilities.
+#
+# Layer purposes:
+# - Core Yocto layers: Basic Linux system functionality
+# - OpenEmbedded layers: Extended packages and utilities
+# - meta-raspberrypi: Raspberry Pi 3 hardware support and drivers
+# - meta-robotics: Robotics controller application
+#
+# Raspberry Pi 3 specific features enabled:
+# - VideoCore IV GPU drivers and firmware
+# - Camera interface (CSI) support
+# - Wi-Fi and Bluetooth drivers
+# - GPIO, I2C, SPI, and UART interfaces
+# - Hardware video encoding/decoding support
+# =================================================================
+
+# Configuration format version for compatibility tracking
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+# Base directory for all layers (automatically set by build environment)
+BBPATH = "${TOPDIR}"
+
+# Source tree directory (automatically set by build environment)
+BBFILES ?= ""
+
+# List of layers to include in the build
+# Order matters - later layers can override recipes from earlier layers
+BBLAYERS ?= " \
+  ${TOPDIR}/../build/poky/meta \
+  ${TOPDIR}/../build/poky/meta-poky \
+  ${TOPDIR}/../build/poky/meta-yocto-bsp \
+  ${TOPDIR}/../build/meta-openembedded/meta-oe \
+  ${TOPDIR}/../build/meta-openembedded/meta-python \
+  ${TOPDIR}/../build/meta-openembedded/meta-multimedia \
+  ${TOPDIR}/../build/meta-openembedded/meta-networking \
+  ${TOPDIR}/../build/meta-raspberrypi \
+  ${TOPDIR}/../meta-robotics \
+  "
+
+# =================================================================
+# LAYER DESCRIPTIONS
+# =================================================================
+# meta:              Core Yocto layer with essential recipes
+# meta-poky:         Poky distribution configuration and policies
+# meta-yocto-bsp:    Board support packages for reference hardware
+# meta-oe:           OpenEmbedded additional packages and utilities
+# meta-python:       Python packages and runtime environments
+# meta-multimedia:   Multimedia frameworks (GStreamer, FFmpeg, etc.)
+# meta-networking:   Network protocols and services
+# meta-raspberrypi:  Raspberry Pi hardware support, drivers, and firmware
+# meta-robotics:     Custom robotics controller application and configs
+# =================================================================
+
+# =================================================================
+# RASPBERRY PI 3 SPECIFIC NOTES
+# =================================================================
+# The meta-raspberrypi layer provides:
+# - Bootloader configuration for RPi3
+# - VideoCore IV GPU drivers and firmware
+# - Camera interface drivers
+# - Wi-Fi and Bluetooth support
+# - GPIO, I2C, SPI interface drivers
+# - Hardware-specific kernel configurations
+# - Device tree configurations for RPi3
+# =================================================================

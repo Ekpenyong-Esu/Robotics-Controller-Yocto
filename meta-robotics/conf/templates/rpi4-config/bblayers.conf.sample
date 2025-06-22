@@ -1,0 +1,76 @@
+# =================================================================
+# RASPBERRY PI 4 LAYERS CONFIGURATION
+# =================================================================
+# This configuration includes all layers needed for Raspberry Pi 4
+# robotics applications with advanced computer vision, networking,
+# and high-performance computing capabilities.
+#
+# Layer purposes:
+# - Core Yocto layers: Basic Linux system functionality
+# - OpenEmbedded layers: Extended packages and utilities
+# - meta-raspberrypi: Raspberry Pi 4 hardware support and drivers
+# - meta-robotics: Robotics controller application
+#
+# Raspberry Pi 4 specific features enabled:
+# - VideoCore VI GPU drivers and firmware
+# - Advanced camera interface (CSI) support
+# - Wi-Fi 802.11ac and Bluetooth 5.0 drivers
+# - USB 3.0 support for high-speed peripherals
+# - Gigabit Ethernet support
+# - GPIO, I2C, SPI, and UART interfaces
+# - Hardware video encoding/decoding support (H.264, H.265)
+# - Dual display support
+# =================================================================
+
+# Configuration format version for compatibility tracking
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+# Base directory for all layers (automatically set by build environment)
+BBPATH = "${TOPDIR}"
+
+# Source tree directory (automatically set by build environment)
+BBFILES ?= ""
+
+# List of layers to include in the build
+# Order matters - later layers can override recipes from earlier layers
+BBLAYERS ?= " \
+  ${TOPDIR}/../build/poky/meta \
+  ${TOPDIR}/../build/poky/meta-poky \
+  ${TOPDIR}/../build/poky/meta-yocto-bsp \
+  ${TOPDIR}/../build/meta-openembedded/meta-oe \
+  ${TOPDIR}/../build/meta-openembedded/meta-python \
+  ${TOPDIR}/../build/meta-openembedded/meta-multimedia \
+  ${TOPDIR}/../build/meta-openembedded/meta-networking \
+  ${TOPDIR}/../build/meta-raspberrypi \
+  ${TOPDIR}/../meta-robotics \
+  "
+
+# =================================================================
+# LAYER DESCRIPTIONS
+# =================================================================
+# meta:              Core Yocto layer with essential recipes
+# meta-poky:         Poky distribution configuration and policies
+# meta-yocto-bsp:    Board support packages for reference hardware
+# meta-oe:           OpenEmbedded additional packages and utilities
+# meta-python:       Python packages and runtime environments
+# meta-multimedia:   Multimedia frameworks (GStreamer, FFmpeg, etc.)
+# meta-networking:   Network protocols and services
+# meta-raspberrypi:  Raspberry Pi hardware support, drivers, and firmware
+# meta-robotics:     Custom robotics controller application and configs
+# =================================================================
+
+# =================================================================
+# RASPBERRY PI 4 SPECIFIC NOTES
+# =================================================================
+# The meta-raspberrypi layer provides:
+# - Bootloader configuration for RPi4
+# - VideoCore VI GPU drivers and firmware
+# - Advanced camera interface drivers
+# - Wi-Fi 802.11ac and Bluetooth 5.0 support
+# - USB 3.0 drivers for high-speed peripherals
+# - Gigabit Ethernet drivers
+# - GPIO, I2C, SPI interface drivers
+# - Hardware-specific kernel configurations
+# - Device tree configurations for RPi4
+# - Dual display support configurations
+# =================================================================

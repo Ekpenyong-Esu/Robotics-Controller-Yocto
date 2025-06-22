@@ -1,0 +1,89 @@
+# =================================================================
+# BITBAKE LAYERS CONFIGURATION TEMPLATE
+# =================================================================
+# This file defines which meta-layers are included in the build.
+# Each layer provides recipes, configurations, and classes for
+# specific functionality (base system, hardware support, applications).
+#
+# To use this template:
+# 1. Copy to your build directory: cp bblayers.conf.sample build/conf/bblayers.conf
+# 2. Modify paths if your layer locations differ
+# 3. Add or remove layers based on your target platform
+# =================================================================
+
+# POKY_BBLAYERS_CONF_VERSION tracks configuration format compatibility
+# Increment when bblayers.conf format changes incompatibly
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+# BBPATH defines the base directory for BitBake operations
+BBPATH = "\${TOPDIR}"
+
+# BBFILES can be used to specify additional recipe files (usually empty)
+BBFILES ?= ""
+
+# =================================================================
+# LAYER STACK DEFINITION
+# =================================================================
+# BBLAYERS lists all meta-layers to include in the build
+# Layers are processed in the order listed
+# =================================================================
+
+BBLAYERS ?= " \\
+  # =================================================================
+  # CORE YOCTO LAYERS (Required)
+  # =================================================================
+  # meta: Core OpenEmbedded functionality and base recipes
+  \${TOPDIR}/../build/poky/meta \\
+  # meta-poky: Poky distribution configuration and branding
+  \${TOPDIR}/../build/poky/meta-poky \\
+  # meta-yocto-bsp: Board Support Packages for reference hardware
+  \${TOPDIR}/../build/poky/meta-yocto-bsp \\
+
+  # =================================================================
+  # OPENEMBEDDED EXTENSION LAYERS
+  # =================================================================
+  # meta-oe: OpenEmbedded core recipes and utilities
+  \${TOPDIR}/../build/meta-openembedded/meta-oe \\
+  # meta-python: Python packages and runtime support
+  \${TOPDIR}/../build/meta-openembedded/meta-python \\
+  # meta-networking: Network protocols and utilities
+  \${TOPDIR}/../build/meta-openembedded/meta-networking \\
+  # meta-multimedia: Audio/video codecs and multimedia frameworks
+  \${TOPDIR}/../build/meta-openembedded/meta-multimedia \\
+
+  # =================================================================
+  # HARDWARE-SPECIFIC LAYERS (Platform dependent)
+  # =================================================================
+  # meta-raspberrypi: Raspberry Pi hardware support (remove if not using RPi)
+  \${TOPDIR}/../build/meta-raspberrypi \\
+
+  # =================================================================
+  # ROBOTICS APPLICATION LAYER (Required)
+  # =================================================================
+  # meta-robotics: Robotics controller application and configurations
+  \${TOPDIR}/../meta-robotics \\
+  "
+
+# =================================================================
+# LAYER CUSTOMIZATION NOTES
+# =================================================================
+# Platform-specific customization:
+#
+# For BeagleBone Black only:
+# - Remove meta-raspberrypi layer
+# - meta-yocto-bsp provides AM335x support
+#
+# For Raspberry Pi only:
+# - Keep meta-raspberrypi layer
+# - May remove meta-yocto-bsp if not using other reference boards
+#
+# For QEMU emulation:
+# - Remove hardware-specific layers (meta-raspberrypi)
+# - Keep meta-yocto-bsp for QEMU machine definitions
+#
+# Additional layers can be added for:
+# - meta-security: Security hardening
+# - meta-virtualization: Container support
+# - meta-intel: Intel hardware support
+# - meta-ti: Texas Instruments specific support
+# =================================================================

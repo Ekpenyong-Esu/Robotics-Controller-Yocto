@@ -1,0 +1,20 @@
+[Unit]
+Description=Robotics Controller Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/robotics-controller
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+# Make sure GPIO and hardware access works
+PrivateDevices=no
+PrivateNetwork=no
+ProtectSystem=no
+ProtectHome=no
+DevicePolicy=auto
+
+[Install]
+WantedBy=multi-user.target

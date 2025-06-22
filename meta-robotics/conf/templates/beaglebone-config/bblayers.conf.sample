@@ -1,0 +1,80 @@
+# =================================================================
+# BEAGLEBONE BLACK LAYERS CONFIGURATION
+# =================================================================
+# This configuration includes only the layers needed for BeagleBone Black
+# robotics applications, excluding Raspberry Pi specific layers.
+#
+# Layer purposes:
+# - Core Yocto layers: Basic Linux system functionality
+# - OpenEmbedded layers: Extended packages and utilities
+# - meta-yocto-bsp: BeagleBone Black board support
+# - meta-robotics: Robotics controller application
+#
+# Notable exclusions:
+# - meta-raspberrypi: Not needed for BeagleBone Black
+# - Hardware-specific layers for other platforms
+# =================================================================
+
+# Configuration format version for compatibility tracking
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+# Base BitBake path configuration
+BBPATH = "\\${TOPDIR}"
+BBFILES ?= ""
+
+# =================================================================
+# BEAGLEBONE BLACK LAYER STACK
+# =================================================================
+BBLAYERS ?= " \\
+  # =================================================================
+  # CORE YOCTO PROJECT LAYERS (Required)
+  # =================================================================
+  # meta: Core OpenEmbedded recipes and base system
+  \\${TOPDIR}/../build/poky/meta \\
+  # meta-poky: Poky distribution configuration
+  \\${TOPDIR}/../build/poky/meta-poky \\
+  # meta-yocto-bsp: Board support for BeagleBone and reference hardware
+  \\${TOPDIR}/../build/poky/meta-yocto-bsp \\
+
+  # =================================================================
+  # OPENEMBEDDED EXTENSION LAYERS
+  # =================================================================
+  # meta-oe: Core OpenEmbedded recipes and utilities
+  \\${TOPDIR}/../build/meta-openembedded/meta-oe \\
+  # meta-python: Python packages and runtime (for robotics apps)
+  \\${TOPDIR}/../build/meta-openembedded/meta-python \\
+  # meta-networking: Network utilities and protocols
+  \\${TOPDIR}/../build/meta-openembedded/meta-networking \\
+  # meta-multimedia: Audio/video support for computer vision
+  \\${TOPDIR}/../build/meta-openembedded/meta-multimedia \\
+
+  # =================================================================
+  # ROBOTICS APPLICATION LAYER
+  # =================================================================
+  # meta-robotics: BeagleBone robotics controller recipes and configs
+  \\${TOPDIR}/../meta-robotics \\
+  "
+
+# =================================================================
+# BEAGLEBONE OPTIMIZATION NOTES
+# =================================================================
+# This configuration is optimized for BeagleBone Black:
+#
+# Included features:
+# - AM335x processor support (via meta-yocto-bsp)
+# - Real-time kernel patches
+# - GPIO, I2C, SPI, UART, PWM interfaces
+# - PRU (Programmable Real-time Unit) support
+# - Industrial I/O framework for ADC
+# - Multimedia support for computer vision
+#
+# Excluded layers:
+# - meta-raspberrypi: Raspberry Pi specific (not needed)
+# - meta-intel: Intel hardware support (not applicable)
+# - meta-ti: Could be added for enhanced TI support if needed
+#
+# Optional additions for enhanced BeagleBone support:
+# - meta-ti: Enhanced Texas Instruments AM335x support
+# - meta-security: Security hardening for production
+# - meta-real-time: Additional real-time tools and utilities
+# =================================================================

@@ -1,0 +1,142 @@
+# =================================================================
+# YOCTO BUILD CONFIGURATION TEMPLATE
+# =================================================================
+# This file configures the Yocto build system for robotics controller
+# development. It defines the target machine, distribution features,
+# optimization settings, and development tools.
+#
+# To use this template:
+# 1. Copy to your build directory: cp local.conf.sample build/conf/local.conf
+# 2. Modify MACHINE variable for your target platform
+# 3. Adjust optimization and debug settings as needed
+# 4. Remove development features for production builds
+# =================================================================
+
+# =================================================================
+# MACHINE SELECTION
+# =================================================================
+# Define the target hardware platform for the build
+# Available robotics machines:
+# - beaglebone-robotics: BeagleBone Black with robotics cape
+# - rpi4-robotics: Raspberry Pi 4 with robotics features
+# - qemu-robotics: QEMU emulation for development/testing
+MACHINE ?= "beaglebone-robotics"
+
+# =================================================================
+# DISTRIBUTION SELECTION
+# =================================================================
+# Use the Poky reference distribution
+# Provides a stable, well-tested Linux distribution
+DISTRO ?= "poky"
+
+# =================================================================
+# PACKAGE MANAGEMENT
+# =================================================================
+# Use RPM package format for package management
+# Alternatives: package_deb (Debian), package_ipk (OpenWrt-style)
+# RPM provides good dependency resolution and upgrade capabilities
+PACKAGE_CLASSES ?= "package_rpm"
+
+# =================================================================
+# DEVELOPMENT FEATURES
+# =================================================================
+# Enable debug features for development (REMOVE FOR PRODUCTION)
+# - debug-tweaks: Enables root login without password, debug tools
+# - dev-pkgs: Includes development packages and headers
+# - tools-debug: Includes debugging and profiling tools
+EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
+
+# =================================================================
+# BUILD MONITORING AND STATISTICS
+# =================================================================
+# Enable build statistics collection for performance analysis
+# Generates reports on build times, task dependencies, and resource usage
+USER_CLASSES ?= "buildstats"
+
+# =================================================================
+# DISK SPACE MONITORING
+# =================================================================
+# Monitor disk space in build directories to prevent build failures
+# Warns when space is low and stops build when critically low
+BB_DISKMON_DIRS ??= "\\${TMPDIR} \\${DL_DIR} \\${SSTATE_DIR} \\${WORKDIR}"
+BB_DISKMON_WARNLIMIT = "50M"    # Warn when less than 50MB free
+BB_DISKMON_MINLIMIT = "10M"     # Stop build when less than 10MB free
+
+# =================================================================
+# CONFIGURATION VERSION
+# =================================================================
+# Tracks local.conf format compatibility
+CONF_VERSION = "2"
+
+# =================================================================
+# ROBOTICS-SPECIFIC PACKAGE CONFIGURATIONS
+# =================================================================
+# Configure OpenCV with Python3 and GUI support for computer vision
+# Python3: Enables OpenCV Python bindings for robotics applications
+# GTK: Provides GUI support for image display and debugging
+PACKAGECONFIG:append:pn-opencv = " python3"
+PACKAGECONFIG:append:pn-opencv = " gtk"
+
+# =================================================================
+# DISTRIBUTION FEATURES
+# =================================================================
+# Add robotics-specific distribution features
+# - opencv: Computer vision library support
+# - wifi: Wireless networking (important for remote operation)
+# - bluetooth: Bluetooth communication support
+DISTRO_FEATURES:append = " opencv wifi bluetooth"
+
+# =================================================================
+# IMAGE FEATURES
+# =================================================================
+# Add development and debugging features to the root filesystem
+# - ssh-server-openssh: Remote access via SSH
+# - tools-debug: Debugging tools (gdb, strace, etc.)
+# - dev-pkgs: Development packages and headers (optional)
+IMAGE_FEATURES:append = " ssh-server-openssh tools-debug"
+
+# =================================================================
+# DEVELOPMENT USER CONFIGURATION (REMOVE FOR PRODUCTION)
+# =================================================================
+# Set root password to "robotics" for development convenience
+# WARNING: This creates a security vulnerability - remove for production!
+# For production, use proper user accounts with SSH keys
+EXTRA_USERS_PARAMS = "usermod -P robotics root;"
+
+# =================================================================
+# PERFORMANCE OPTIMIZATION OPTIONS (Optional)
+# =================================================================
+# Uncomment and modify these for build performance tuning:
+
+# Parallel build jobs (default: number of CPU cores)
+# PARALLEL_MAKE = "-j 4"
+# BB_NUMBER_THREADS = "4"
+
+# Shared state cache location (speeds up rebuilds)
+# SSTATE_DIR ?= "/opt/yocto/sstate-cache"
+
+# Download directory for source packages
+# DL_DIR ?= "/opt/yocto/downloads"
+
+# =================================================================
+# SECURITY HARDENING (For Production Builds)
+# =================================================================
+# Uncomment these for production security hardening:
+
+# Remove debug features for production
+# EXTRA_IMAGE_FEATURES:remove = "debug-tweaks"
+
+# Remove development tools
+# IMAGE_FEATURES:remove = "tools-debug"
+
+# Enable security features
+# DISTRO_FEATURES:append = " pam systemd"
+# EXTRA_IMAGE_FEATURES:append = " read-only-rootfs"
+
+# =================================================================
+# REAL-TIME KERNEL CONFIGURATION
+# =================================================================
+# The robotics machines automatically use linux-yocto-rt kernel
+# with PREEMPT_RT patches for real-time performance.
+# Additional RT-specific settings can be added here if needed.
+# =================================================================

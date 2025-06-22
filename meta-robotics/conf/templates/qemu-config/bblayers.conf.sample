@@ -1,0 +1,89 @@
+# =================================================================
+# QEMU EMULATION LAYERS CONFIGURATION
+# =================================================================
+# This configuration includes layers needed for QEMU ARM64 emulation
+# of robotics applications without hardware-specific dependencies.
+#
+# Layer purposes:
+# - Core Yocto layers: Basic Linux system functionality
+# - OpenEmbedded layers: Extended packages for development
+# - meta-yocto-bsp: QEMU machine definitions and support
+# - meta-robotics: Robotics software (hardware-independent parts)
+#
+# Notable exclusions:
+# - meta-raspberrypi: Hardware-specific, not needed for emulation
+# - Hardware-specific BSP layers: Not applicable to virtual machines
+# =================================================================
+
+# Configuration format version for compatibility tracking
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+# Base BitBake path configuration
+BBPATH = "\\${TOPDIR}"
+BBFILES ?= ""
+
+# =================================================================
+# QEMU EMULATION LAYER STACK
+# =================================================================
+BBLAYERS ?= " \\
+  # =================================================================
+  # CORE YOCTO PROJECT LAYERS (Required)
+  # =================================================================
+  # meta: Core OpenEmbedded recipes and base Linux system
+  \\${TOPDIR}/../build/poky/meta \\
+  # meta-poky: Poky distribution configuration and policies
+  \\${TOPDIR}/../build/poky/meta-poky \\
+  # meta-yocto-bsp: QEMU machine definitions and virtual hardware support
+  \\${TOPDIR}/../build/poky/meta-yocto-bsp \\
+
+  # =================================================================
+  # OPENEMBEDDED DEVELOPMENT LAYERS
+  # =================================================================
+  # meta-oe: Extended OpenEmbedded recipes and development tools
+  \\${TOPDIR}/../build/meta-openembedded/meta-oe \\
+  # meta-python: Python packages and robotics development libraries
+  \\${TOPDIR}/../build/meta-openembedded/meta-python \\
+  # meta-networking: Network utilities for testing and development
+  \\${TOPDIR}/../build/meta-openembedded/meta-networking \\
+  # meta-multimedia: Audio/video support for computer vision testing
+  \\${TOPDIR}/../build/meta-openembedded/meta-multimedia \\
+
+  # =================================================================
+  # ROBOTICS APPLICATION LAYER
+  # =================================================================
+  # meta-robotics: Robotics software stack (hardware-independent parts)
+  \\${TOPDIR}/../meta-robotics \\
+  "
+
+# =================================================================
+# QEMU EMULATION OPTIMIZATION NOTES
+# =================================================================
+# This configuration is optimized for QEMU ARM64 emulation:
+#
+# Included features:
+# - Virtual ARM64 processor emulation
+# - Standard Linux kernel (non-RT for emulation)
+# - Development and debugging tools
+# - Network connectivity for remote access
+# - Software testing capabilities
+# - Computer vision libraries (software-only)
+#
+# Hardware limitations in emulation:
+# - No real GPIO, I2C, SPI interfaces
+# - No real-time guarantees (host OS dependent)
+# - No physical sensor integration
+# - Limited hardware-specific driver testing
+#
+# Suitable for:
+# - Algorithm development and testing
+# - Software integration testing
+# - CI/CD pipeline validation
+# - Multi-platform compatibility testing
+# - Training and educational purposes
+#
+# Not suitable for:
+# - Hardware interface testing
+# - Real-time performance validation
+# - Physical sensor integration
+# - Production deployment testing
+# =================================================================
