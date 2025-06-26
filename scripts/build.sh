@@ -223,13 +223,13 @@ setup_layers() {
 
         # Try machine-specific template first, then fall back to generic
         local template_used=false
-        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf.sample" ]; then
-            log_info "Using machine-specific template: ${machine_config_dir}/local.conf.sample"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf.sample" "${BUILD_DIR}/conf/local.conf"
+        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf" ]; then
+            log_info "Using machine-specific template: ${machine_config_dir}/local.conf"
+            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf" "${BUILD_DIR}/conf/local.conf"
             template_used=true
-        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf.sample" ]; then
-            log_info "Using generic template: local.conf.sample"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf.sample" "${BUILD_DIR}/conf/local.conf"
+        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" ]; then
+            log_info "Using generic template: local.conf"
+            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" "${BUILD_DIR}/conf/local.conf"
             template_used=true
         fi
 
@@ -272,13 +272,13 @@ EOF
 
         # Try machine-specific template first, then fall back to generic
         local template_used=false
-        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf.sample" ]; then
-            log_info "Using machine-specific template: ${machine_config_dir}/bblayers.conf.sample"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf.sample" "${BUILD_DIR}/conf/bblayers.conf"
+        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" ]; then
+            log_info "Using machine-specific template: ${machine_config_dir}/bblayers.conf"
+            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
             template_used=true
-        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf.sample" ]; then
-            log_info "Using generic template: bblayers.conf.sample"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf.sample" "${BUILD_DIR}/conf/bblayers.conf"
+        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" ]; then
+            log_info "Using generic template: bblayers.conf"
+            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
             template_used=true
         fi
 

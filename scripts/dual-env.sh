@@ -147,12 +147,12 @@ setup_local_conf() {
     local machine_config_dir=$1
     local machine=$2
 
-    if [ -n "$machine_config_dir" ] && [ -f "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/local.conf.sample" ]; then
-        echo -e "${YELLOW}Using machine-specific local.conf template:${NC} ${machine_config_dir}/local.conf.sample"
-        cp "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/local.conf.sample" "$PWD/conf/local.conf"
-    elif [ -f "$PROJECT_DIR/meta-robotics/conf/templates/local.conf.sample" ]; then
+    if [ -n "$machine_config_dir" ] && [ -f "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/local.conf" ]; then
+        echo -e "${YELLOW}Using machine-specific local.conf template:${NC} ${machine_config_dir}/local.conf"
+        cp "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/local.conf" "$PWD/conf/local.conf"
+    elif [ -f "$PROJECT_DIR/meta-robotics/conf/templates/local.conf" ]; then
         echo -e "${YELLOW}Using generic local.conf template${NC}"
-        cp "$PROJECT_DIR/meta-robotics/conf/templates/local.conf.sample" "$PWD/conf/local.conf"
+        cp "$PROJECT_DIR/meta-robotics/conf/templates/local.conf" "$PWD/conf/local.conf"
         # Update machine in the generic template
         if grep -q "^MACHINE ?=" "$PWD/conf/local.conf"; then
             sed -i "s/^MACHINE ?=.*$/MACHINE ?= \"$machine\"/" "$PWD/conf/local.conf"
@@ -177,12 +177,12 @@ setup_bblayers_conf() {
     local machine_config_dir=$1
     local target=$2
 
-    if [ -n "$machine_config_dir" ] && [ -f "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf.sample" ]; then
-        echo -e "${YELLOW}Using machine-specific bblayers.conf template:${NC} ${machine_config_dir}/bblayers.conf.sample"
-        cp "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf.sample" "$PWD/conf/bblayers.conf"
-    elif [ -f "$PROJECT_DIR/meta-robotics/conf/templates/bblayers.conf.sample" ]; then
+    if [ -n "$machine_config_dir" ] && [ -f "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" ]; then
+        echo -e "${YELLOW}Using machine-specific bblayers.conf template:${NC} ${machine_config_dir}/bblayers.conf"
+        cp "$PROJECT_DIR/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" "$PWD/conf/bblayers.conf"
+    elif [ -f "$PROJECT_DIR/meta-robotics/conf/templates/bblayers.conf" ]; then
         echo -e "${YELLOW}Using generic bblayers.conf template${NC}"
-        cp "$PROJECT_DIR/meta-robotics/conf/templates/bblayers.conf.sample" "$PWD/conf/bblayers.conf"
+        cp "$PROJECT_DIR/meta-robotics/conf/templates/bblayers.conf" "$PWD/conf/bblayers.conf"
     else
         echo -e "${YELLOW}No bblayers template found, using manual layer setup${NC}"
         # Fallback to manual layer addition (existing logic)

@@ -24,14 +24,14 @@ S = "${TOPDIR}/../src/robotics-controller"
 # =================================================================
 # DEPENDENCIES
 # =================================================================
-DEPENDS = "opencv libgpiod nlohmann-json boost protobuf-native protobuf systemd cmake-native"
+DEPENDS = "opencv libgpiod systemd cmake-native"
 
-RDEPENDS:${PN} = "opencv libgpiod nlohmann-json boost protobuf python3-core python3-opencv systemd"
+RDEPENDS:${PN} = "opencv libgpiod python3-core python3-opencv systemd"
 
 # =================================================================
 # BUILD SYSTEM
 # =================================================================
-inherit cmake systemd
+inherit cmake systemd update-rc.d
 
 # Systemd configuration
 SYSTEMD_PACKAGES = "${PN}"
@@ -46,7 +46,7 @@ FILES:${PN} += " \
     ${sysconfdir}/robotics-controller.conf \
     ${sysconfdir}/init.d/robotics-controller \
     ${datadir}/${PN}/www/* \
-    ${systemd_system_unitdir}/robotics-controller.service \
+    ${systemd_unitdir}/system/robotics-controller.service \
 "
 
 # =================================================================
@@ -71,8 +71,8 @@ do_install() {
 
     # Install systemd service
     if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-        install -d ${D}${systemd_system_unitdir}
-        install -m 0644 ${WORKDIR}/robotics-controller.service ${D}${systemd_system_unitdir}/
+        install -d ${D}${systemd_unitdir}/system
+        install -m 0644 ${WORKDIR}/robotics-controller.service ${D}${systemd_unitdir}/system/
     fi
 }
 
@@ -81,5 +81,3 @@ do_install() {
 # =================================================================
 INITSCRIPT_NAME = "robotics-controller"
 INITSCRIPT_PARAMS = "defaults 99"
-
-inherit update-rc.d

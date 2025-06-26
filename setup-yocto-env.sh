@@ -779,6 +779,67 @@ if [ ! -d "$PROJECT_DIR/build/meta-openembedded" ]; then
     fi
 fi
 
+# Function to add a meta-layer to bblayers.conf
+add_layer_to_bblayers() {
+    local layer_name="$1"
+    local layer_path="$2"
+
+    if [ -f "$PROJECT_DIR/build/conf/bblayers.conf" ]; then
+        if ! grep -q "$layer_name" "$PROJECT_DIR/build/conf/bblayers.conf"; then
+            echo -e "${BLUE}Adding $layer_name to bblayers.conf...${NC}"
+            # Insert before the last line with meta-robotics
+            sed -i "/meta-robotics/i\\  $layer_path \\\\" "$PROJECT_DIR/build/conf/bblayers.conf"
+            echo -e "${GREEN}$layer_name added to bblayers.conf${NC}"
+        else
+            echo -e "${YELLOW}$layer_name already in bblayers.conf${NC}"
+        fi
+    fi
+}
+
+# Function to clone and setup optional meta-layers
+setup_optional_layers() {
+    echo -e "${BLUE}Setting up optional meta-layers...${NC}"
+    echo -e "This will prompt you for each optional layer."
+    echo
+
+    # Define available optional layers
+    declare -A OPTIONAL_LAYERS=(
+        ["meta-raspberrypi"]="git://git.yoctoproject.org/meta-raspberrypi|Raspberry Pi BSP layer"
+        ["meta-ti"]="git://git.yoctoproject.org/meta-ti|Texas Instruments BSP layer"
+        ["meta-realtime"]="git://git.yoctoproject.org/meta-realtime|Real-time kernel support"
+        ["meta-security"]="git://git.yoctoproject.org/meta-security|Security features and hardening"
+        ["meta-virtualization"]="git://git.yoctoproject.org/meta-virtualization|Docker and virtualization support"
+        ["meta-nodejs"]="git://github.com/imyller/meta-nodejs|Node.js support"
+        ["meta-python"]="git://git.openembedded.org/meta-python|Additional Python packages"
+        ["meta-multimedia"]="git://git.openembedded.org/meta-multimedia|Multimedia packages"
+        ["meta-networking"]="git://git.openembedded.org/meta-networking|Networking packages"
+    )
+
+    for layer in "${!OPTIONAL_LAYERS[@]}"; do
+        IFS='|' read -r repo description <<< "${OPTIONAL_LAYERS[$layer]}"
+
+        if [ ! -d "$PROJECT_DIR/build/$layer" ]; then
+            echo -e "${YELLOW}$layer is not cloned.${NC}"
+            echo -e "Description: $description"
+            read -p "Clone $layer? [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${BLUE}Cloning $layer...${NC}"
+                if git clone "$repo" -b scarthgap "$PROJECT_DIR/build/$layer"; then
+                    echo -e "${GREEN}$layer cloned successfully!${NC}"
+                    add_layer_to_bblayers "$layer" "\${TOPDIR}/../$layer"
+                else
+                    echo -e "${RED}Failed to clone $layer${NC}"
+                fi
+            fi
+        else
+            echo -e "${GREEN}$layer already exists${NC}"
+            add_layer_to_bblayers "$layer" "\${TOPDIR}/../$layer"
+        fi
+        echo
+    done
+}
+
 # Check if meta-raspberrypi is cloned (only needed for Raspberry Pi builds)
 if [ ! -d "$PROJECT_DIR/build/meta-raspberrypi" ]; then
     echo -e "${YELLOW}meta-raspberrypi is not yet cloned. Do you want to clone it now?${NC}"
@@ -789,18 +850,22 @@ if [ ! -d "$PROJECT_DIR/build/meta-raspberrypi" ]; then
         echo -e "${BLUE}Cloning meta-raspberrypi layer...${NC}"
         git clone git://git.yoctoproject.org/meta-raspberrypi -b scarthgap "$PROJECT_DIR/build/meta-raspberrypi"
         echo -e "${GREEN}meta-raspberrypi cloned successfully!${NC}"
-
-        # Add meta-raspberrypi to bblayers.conf if it exists
-        if [ -f "$PROJECT_DIR/build/conf/bblayers.conf" ]; then
-            if ! grep -q "meta-raspberrypi" "$PROJECT_DIR/build/conf/bblayers.conf"; then
-                echo -e "${BLUE}Adding meta-raspberrypi to bblayers.conf...${NC}"
-                # Insert meta-raspberrypi before the last line with meta-robotics
-                sed -i "/meta-robotics/i\\  \\${TOPDIR}\\/../meta-raspberrypi \\\\" "$PROJECT_DIR/build/conf/bblayers.conf"
-            fi
-        fi
+        add_layer_to_bblayers "meta-raspberrypi" "\${TOPDIR}/../meta-raspberrypi"
     else
         echo -e "${YELLOW}Skipping meta-raspberrypi clone. You will need to clone it manually if building for Raspberry Pi.${NC}"
     fi
+else
+    add_layer_to_bblayers "meta-raspberrypi" "\${TOPDIR}/../meta-raspberrypi"
+fi
+
+# Ask if user wants to setup additional optional layers
+echo
+echo -e "${YELLOW}Would you like to setup additional meta-layers?${NC}"
+echo -e "Available layers include: meta-ti, meta-realtime, meta-security, meta-virtualization, etc."
+read -p "Setup optional layers? [y/N] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_optional_layers
 fi
 
 # Source Poky environment if it exists
@@ -837,7 +902,97 @@ if [ -d "$PROJECT_DIR/build/poky" ]; then
 
     echo -e "${GREEN}Yocto build environment initialized!${NC}"
     echo -e "${YELLOW}You can now run:${NC} bitbake robotics-image"
+    echo -e "${YELLOW}To add more layers later, run:${NC} add_meta_layer <layer-name> <git-url>"
 else
     echo -e "${RED}Poky not found. Please clone it first by running:${NC}"
     echo -e "${YELLOW}./scripts/build.sh${NC}"
 fi
+
+# Function to add a new meta-layer (for use after initial setup)
+add_meta_layer() {
+    if [ $# -lt 2 ]; then
+        echo "Usage: add_meta_layer <layer-name> <git-url> [branch]"
+        echo "Example: add_meta_layer meta-golang https://github.com/bmwcarit/meta-golang scarthgap"
+        return 1
+    fi
+
+    local layer_name="$1"
+    local git_url="$2"
+    local branch="${3:-scarthgap}"
+    local layer_path="$PROJECT_DIR/build/$layer_name"
+
+    echo -e "${BLUE}Adding new meta-layer: $layer_name${NC}"
+
+    # Clone the layer if it doesn't exist
+    if [ ! -d "$layer_path" ]; then
+        echo -e "${BLUE}Cloning $layer_name from $git_url...${NC}"
+        if git clone "$git_url" -b "$branch" "$layer_path"; then
+            echo -e "${GREEN}$layer_name cloned successfully!${NC}"
+        else
+            echo -e "${RED}Failed to clone $layer_name${NC}"
+            return 1
+        fi
+    else
+        echo -e "${YELLOW}$layer_name already exists at $layer_path${NC}"
+    fi
+
+    # Add to bblayers.conf
+    add_layer_to_bblayers "$layer_name" "\${TOPDIR}/../$layer_name"
+
+    echo -e "${GREEN}$layer_name has been added to your Yocto build!${NC}"
+    echo -e "${YELLOW}Note: You may need to check layer dependencies and update local.conf if needed.${NC}"
+}
+
+# Function to list available layers
+list_available_layers() {
+    echo -e "${BLUE}Popular meta-layers for embedded/robotics development:${NC}"
+    echo
+    echo -e "${YELLOW}Hardware BSP Layers:${NC}"
+    echo "  meta-ti               - Texas Instruments (BeagleBone, etc.)"
+    echo "  meta-raspberrypi      - Raspberry Pi support"
+    echo "  meta-intel            - Intel hardware support"
+    echo "  meta-xilinx           - Xilinx FPGA/SoC support"
+    echo
+    echo -e "${YELLOW}Real-time and Performance:${NC}"
+    echo "  meta-realtime         - Real-time kernel patches"
+    echo "  meta-latency-testing  - Latency testing tools"
+    echo
+    echo -e "${YELLOW}Security:${NC}"
+    echo "  meta-security         - Security hardening features"
+    echo "  meta-tpm              - TPM support"
+    echo "  meta-selinux          - SELinux support"
+    echo
+    echo -e "${YELLOW}Connectivity and IoT:${NC}"
+    echo "  meta-networking       - Additional networking packages"
+    echo "  meta-bluetooth        - Bluetooth stack"
+    echo "  meta-wifi             - WiFi support"
+    echo "  meta-iot              - IoT frameworks"
+    echo
+    echo -e "${YELLOW}Development and Languages:${NC}"
+    echo "  meta-nodejs           - Node.js support"
+    echo "  meta-python           - Extended Python packages"
+    echo "  meta-rust             - Rust programming language"
+    echo "  meta-golang           - Go programming language"
+    echo "  meta-java             - Java support"
+    echo
+    echo -e "${YELLOW}Robotics and AI:${NC}"
+    echo "  meta-ros              - Robot Operating System"
+    echo "  meta-tensorflow-lite  - TensorFlow Lite"
+    echo "  meta-opencv           - OpenCV computer vision"
+    echo "  meta-ml               - Machine learning frameworks"
+    echo
+    echo -e "${YELLOW}Multimedia and Graphics:${NC}"
+    echo "  meta-multimedia       - Audio/video packages"
+    echo "  meta-qt5              - Qt5 framework"
+    echo "  meta-gnome            - GNOME desktop"
+    echo
+    echo -e "${YELLOW}Virtualization and Containers:${NC}"
+    echo "  meta-virtualization   - Docker, LXC, etc."
+    echo "  meta-cloud-services   - Cloud service integration"
+    echo
+    echo -e "${BLUE}To add a layer, use:${NC} add_meta_layer <layer-name> <git-url>"
+}
+
+# Export functions for use in shell
+export -f add_meta_layer
+export -f list_available_layers

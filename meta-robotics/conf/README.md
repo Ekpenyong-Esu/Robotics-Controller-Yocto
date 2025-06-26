@@ -12,14 +12,14 @@ conf/
 │   ├── rpi4-robotics.conf          # Raspberry Pi 4 robotics machine
 │   └── qemu-robotics.conf          # QEMU emulation machine
 └── templates/                 # Build configuration templates
-    ├── bblayers.conf.sample        # General layer configuration
-    ├── local.conf.sample           # General build configuration
+    ├── bblayers.conf              # General layer configuration
+    ├── local.conf                 # General build configuration
     ├── beaglebone-config/          # BeagleBone-specific templates
-    │   ├── bblayers.conf.sample
-    │   └── local.conf.sample
+    │   ├── bblayers.conf
+    │   └── local.conf
     └── qemu-config/               # QEMU-specific templates
-        ├── bblayers.conf.sample
-        └── local.conf.sample
+        ├── bblayers.conf
+        └── local.conf
 ```
 
 ## 🔧 Configuration Files Overview
@@ -124,7 +124,7 @@ QB_MEM = "512M"
 
 Build templates provide ready-to-use configurations for different development scenarios.
 
-#### `templates/bblayers.conf.sample`
+#### `templates/bblayers.conf`
 **Purpose**: General layer configuration template for all platforms.
 
 **Included Layers**:
@@ -135,10 +135,10 @@ Build templates provide ready-to-use configurations for different development sc
 
 **Usage**:
 ```bash
-cp meta-robotics/conf/templates/bblayers.conf.sample build/conf/bblayers.conf
+cp meta-robotics/conf/templates/bblayers.conf build/conf/bblayers.conf
 ```
 
-#### `templates/local.conf.sample`
+#### `templates/local.conf`
 **Purpose**: General build configuration with robotics optimizations.
 
 **Key Features**:
@@ -178,8 +178,8 @@ Choose the appropriate template based on your target platform:
 source poky/oe-init-build-env build-beaglebone
 
 # Copy BeagleBone-specific templates
-cp ../meta-robotics/conf/templates/beaglebone-config/local.conf.sample conf/local.conf
-cp ../meta-robotics/conf/templates/beaglebone-config/bblayers.conf.sample conf/bblayers.conf
+cp ../meta-robotics/conf/templates/beaglebone-config/local.conf conf/local.conf
+cp ../meta-robotics/conf/templates/beaglebone-config/bblayers.conf conf/bblayers.conf
 
 # Build robotics image
 bitbake robotics-image
@@ -191,8 +191,8 @@ bitbake robotics-image
 source poky/oe-init-build-env build-rpi4
 
 # Copy general templates and modify for RPi4
-cp ../meta-robotics/conf/templates/local.conf.sample conf/local.conf
-cp ../meta-robotics/conf/templates/bblayers.conf.sample conf/bblayers.conf
+cp ../meta-robotics/conf/templates/local.conf conf/local.conf
+cp ../meta-robotics/conf/templates/bblayers.conf conf/bblayers.conf
 
 # Edit local.conf to set machine
 sed -i 's/MACHINE ?= "beaglebone-robotics"/MACHINE ?= "rpi4-robotics"/' conf/local.conf
@@ -207,8 +207,8 @@ bitbake robotics-image
 source poky/oe-init-build-env build-qemu
 
 # Copy QEMU-specific templates
-cp ../meta-robotics/conf/templates/qemu-config/local.conf.sample conf/local.conf
-cp ../meta-robotics/conf/templates/qemu-config/bblayers.conf.sample conf/bblayers.conf
+cp ../meta-robotics/conf/templates/qemu-config/local.conf conf/local.conf
+cp ../meta-robotics/conf/templates/qemu-config/bblayers.conf conf/bblayers.conf
 
 # Build and run emulation
 bitbake robotics-image

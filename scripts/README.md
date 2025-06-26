@@ -22,6 +22,7 @@ All scripts in this directory follow standard Unix/Linux command-line option con
 | `run.sh` | Runs the system in QEMU or connects to hardware |
 | `save-config.sh` | Saves the current Yocto configuration |
 | `manage-recipe.sh` | **NEW** - Manages meta-robotics layer recipes and source synchronization |
+| `manage-layers.sh` | **NEW** - Comprehensive script for managing meta-layers in the Yocto build |
 
 ## Supported Target Machines
 
@@ -313,7 +314,92 @@ The `manage-recipe.sh` script provides comprehensive management of the meta-robo
 - `clean.sh` automatically calls `clean-recipe` when cleaning build artifacts
 - `flash.sh` checks if source is newer than recipe and offers to sync
 
-# ...existing content...
+### Layer Management
+
+### manage-layers.sh
+**NEW** - Comprehensive script for managing meta-layers in the Yocto build.
+
+**Usage**:
+```bash
+./scripts/manage-layers.sh [command] [options]
+```
+
+**Commands**:
+- `list` - List all currently configured layers
+- `available` - Show popular available meta-layers with URLs
+- `add <name> <url> [branch]` - Add a new meta-layer
+- `remove <name>` - Remove a meta-layer  
+- `update <name>` - Update a meta-layer to latest commit
+- `info <name>` - Show detailed information about a layer
+
+**Examples**:
+```bash
+# List current layers
+./scripts/manage-layers.sh list
+
+# Show available layers
+./scripts/manage-layers.sh available
+
+# Add a new layer
+./scripts/manage-layers.sh add meta-golang https://github.com/bmwcarit/meta-golang
+
+# Add with specific branch
+./scripts/manage-layers.sh add meta-ros https://github.com/ros/meta-ros scarthgap
+
+# Remove a layer
+./scripts/manage-layers.sh remove meta-golang
+
+# Update a layer
+./scripts/manage-layers.sh update meta-raspberrypi
+
+# Get layer information
+./scripts/manage-layers.sh info meta-security
+```
+
+### Popular Meta-Layers for Robotics
+
+The following meta-layers are commonly useful for robotics projects:
+
+#### Hardware BSP Layers
+- **meta-ti** - Texas Instruments hardware (BeagleBone, etc.)
+- **meta-raspberrypi** - Raspberry Pi support
+- **meta-intel** - Intel hardware support
+- **meta-xilinx** - Xilinx FPGA/SoC support
+
+#### Real-time and Performance
+- **meta-realtime** - Real-time kernel patches and tools
+- **meta-latency-testing** - Tools for measuring system latency
+
+#### Security
+- **meta-security** - Security hardening features
+- **meta-tpm** - Trusted Platform Module support
+- **meta-selinux** - SELinux mandatory access control
+
+#### Connectivity and IoT
+- **meta-networking** - Additional networking packages
+- **meta-bluetooth** - Bluetooth stack and utilities
+- **meta-iot** - IoT frameworks and protocols
+
+#### Development Languages
+- **meta-nodejs** - Node.js runtime and packages
+- **meta-python** - Extended Python packages
+- **meta-rust** - Rust programming language
+- **meta-golang** - Go programming language
+- **meta-java** - Java support (OpenJDK)
+
+#### Robotics and AI
+- **meta-ros** - Robot Operating System (ROS)
+- **meta-tensorflow-lite** - TensorFlow Lite for edge AI
+- **meta-opencv** - OpenCV computer vision library
+
+#### Multimedia and Graphics
+- **meta-multimedia** - Audio and video packages
+- **meta-qt5** - Qt5 GUI framework
+- **meta-gnome** - GNOME desktop environment
+
+#### Virtualization
+- **meta-virtualization** - Docker, LXC, and other containers
+- **meta-cloud-services** - Cloud service integration
 
 ## Common Workflows
 
@@ -543,8 +629,8 @@ meta-robotics/
 ├── conf/                      # Layer configuration
 │   ├── layer.conf              # Layer definition
 │   ├── templates/              # Template configurations
-│   │   ├── bblayers.conf.sample  # Layer template
-│   │   └── local.conf.sample     # Build config template
+│   │   ├── bblayers.conf         # Layer template
+│   │   └── local.conf           # Build config template
 │   └── machine/                # Machine configurations
 │       ├── beaglebone-robotics.conf
 │       ├── rpi4-robotics.conf

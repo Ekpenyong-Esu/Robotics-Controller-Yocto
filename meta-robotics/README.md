@@ -50,14 +50,14 @@ meta-robotics/
 │   │   ├── rpi4-robotics.conf          # Raspberry Pi 4 optimizations
 │   │   └── qemu-robotics.conf          # QEMU virtual testing
 │   └── templates/                      # Build configuration templates
-│       ├── bblayers.conf.sample        # Layer configuration template
-│       ├── local.conf.sample           # Build settings template
+│       ├── bblayers.conf              # Layer configuration template
+│       ├── local.conf                 # Build settings template
 │       ├── beaglebone-config/          # BeagleBone-specific templates
-│       │   ├── local.conf.sample       # BeagleBone build configuration
-│       │   └── bblayers.conf.sample    # BeagleBone layer configuration
+│       │   ├── local.conf             # BeagleBone build configuration
+│       │   └── bblayers.conf          # BeagleBone layer configuration
 │       └── qemu-config/                # QEMU-specific templates
-│           ├── local.conf.sample       # QEMU build configuration
-│           └── bblayers.conf.sample    # QEMU layer configuration
+│           ├── local.conf             # QEMU build configuration
+│           └── bblayers.conf          # QEMU layer configuration
 │
 ├── recipes-core/                       # 🖼️ System Images & Core Modifications
 │   ├── README.md                       # Image recipes documentation
