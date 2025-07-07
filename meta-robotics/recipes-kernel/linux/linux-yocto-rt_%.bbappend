@@ -5,6 +5,9 @@
 # The "%" in the filename matches any version of linux-yocto-rt
 # =================================================================
 
+# Allow this kernel recipe to build for all robotics machines
+COMPATIBLE_MACHINE:append = "|qemu-robotics|beaglebone-robotics|rpi3-robotics|rpi4-robotics"
+
 # Add our custom files to the search path for kernel configs
 # FILESEXTRAPATHS allows Yocto to find our custom files in the recipe directory
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
@@ -15,10 +18,12 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 # These configs are only applied to the BeagleBone machine
 # rt-preemption.cfg - Enables PREEMPT_RT for real-time operation
 # robotics-platform.cfg - Platform-specific optimizations for robotics
+# spi-beaglebone.cfg - BeagleBone-specific SPI hardware drivers
 # =================================================================
 SRC_URI:append:beaglebone-robotics = " \
     file://rt-preemption.cfg \
     file://robotics-platform.cfg \
+    file://spi-beaglebone.cfg \
 "
 
 # =================================================================
@@ -51,4 +56,19 @@ SRC_URI:append = " \
 # =================================================================
 SRC_URI:append:beaglebone-robotics = " \
     file://0001-Add-BeagleBone-Black-robotics-dts.patch \
+"
+
+# =================================================================
+# RASPBERRY PI ROBOTICS PLATFORM CONFIGURATION
+# =================================================================
+# Apply Raspberry Pi-specific robotics kernel config with RT support
+# This enables hardware features, optimizations, and real-time capabilities for RPi robotics
+# =================================================================
+SRC_URI:append:rpi3-robotics = " \
+    file://rt-preemption.cfg \
+    file://robotics-platform-rpi.cfg \
+"
+SRC_URI:append:rpi4-robotics = " \
+    file://rt-preemption.cfg \
+    file://robotics-platform-rpi.cfg \
 "

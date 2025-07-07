@@ -92,25 +92,41 @@ setup_build() {
         echo -e "${RED}Warning:${NC} manage-recipe.sh not found, using manual setup"
     fi
 
-    # Set up the build environment
-    if [ -d "$PROJECT_DIR/build/poky" ]; then
-        echo -e "${YELLOW}Initializing Yocto build environment in:${NC} $build_dir"
-        cd "$PROJECT_DIR" || return 1
+    # Sync meta-robotics layer to the specific build directory
+    local sync_script="$PROJECT_DIR/scripts/sync-meta-layer.sh"
+    if [ -x "$sync_script" ]; then
+        echo -e "${YELLOW}Syncing meta-robotics layer to $build_dir...${NC}"
+        if ! "$sync_script" sync "$build_dir" --force; then
+            echo -e "${RED}Warning:${NC} Failed to sync meta-robotics layer"
+        fi
+    fi
 
-        # change to the build directory
-        source build/poky/oe-init-build-env "$build_dir"
-
-        # Use machine-specific templates like build.sh does
-        setup_machine_templates "$target" "$machine"
-
-        echo -e "${GREEN}Build environment setup complete for:${NC} $target"
-        echo -e "You are now in the $build_dir directory."
-        echo -e "Run ${YELLOW}bitbake robotics-image${NC} to start building."
-    else
-        echo -e "${RED}Error:${NC} Poky repository not found."
-        echo -e "Run './scripts/build.sh' first to set up repositories."
+    # Check for required submodules (poky, meta-openembedded)
+    local missing_submodules=()
+    if [ ! -d "$PROJECT_DIR/poky" ]; then
+        missing_submodules+=("poky")
+    fi
+    if [ ! -d "$PROJECT_DIR/meta-openembedded" ]; then
+        missing_submodules+=("meta-openembedded")
+    fi
+    if [ ${#missing_submodules[@]} -ne 0 ]; then
+        echo -e "${RED}Error:${NC} Required submodules missing: ${missing_submodules[*]}"
+        echo -e "Run: ${YELLOW}git submodule update --init --recursive${NC} in the project root."
         return 1
     fi
+
+    echo -e "${YELLOW}Initializing Yocto build environment in:${NC} $build_dir"
+    cd "$PROJECT_DIR" || return 1
+
+    # change to the build directory
+    source poky/oe-init-build-env "$build_dir"
+
+    # Use machine-specific templates like build.sh does
+    setup_machine_templates "$target" "$machine"
+
+    echo -e "${GREEN}Build environment setup complete for:${NC} $target"
+    echo -e "You are now in the $build_dir directory."
+    echo -e "Run ${YELLOW}bitbake robotics-controller-image${NC} to start building."
 }
 
 # Function to setup machine-specific templates (like build.sh)
@@ -198,8 +214,8 @@ manual_layer_setup() {
     if [ -f "$PWD/conf/bblayers.conf" ]; then
         if ! grep -q "meta-robotics" "$PWD/conf/bblayers.conf"; then
             echo -e "${YELLOW}Adding meta-robotics layer to build configuration...${NC}"
-            # Add our layer by inserting before the closing quote
-            sed -i "/^\s*\"\s*$/i\\  $PROJECT_DIR/meta-robotics \\\\" "$PWD/conf/bblayers.conf"
+            # Add our layer by inserting before the closing quote (" on its own line)
+            sed -i '/^[[:space:]]*"[[:space:]]*$/i\  \${TOPDIR}/../meta-robotics \\' "$PWD/conf/bblayers.conf"
         fi
     fi
 
@@ -207,8 +223,8 @@ manual_layer_setup() {
     if [[ "$target" == "rpi3" || "$target" == "rpi4" ]] && [ -f "$PWD/conf/bblayers.conf" ]; then
         if ! grep -q "meta-raspberrypi" "$PWD/conf/bblayers.conf"; then
             echo -e "${YELLOW}Adding meta-raspberrypi layer for Raspberry Pi support...${NC}"
-            if [ -d "$PROJECT_DIR/build/meta-raspberrypi" ]; then
-                sed -i "/meta-robotics/i\\  \\${TOPDIR}\\/../build/meta-raspberrypi \\\\" "$PWD/conf/bblayers.conf"
+            if [ -d "$PROJECT_DIR/meta-raspberrypi" ]; then
+                sed -i "/meta-robotics/i\\  \\${TOPDIR}/../meta-raspberrypi \\\\" "$PWD/conf/bblayers.conf"
             else
                 echo -e "${RED}Warning:${NC} meta-raspberrypi layer not found."
                 echo -e "Run './scripts/build.sh' first to set up repositories."
@@ -231,10 +247,10 @@ build_image() {
 
     echo -e "${BLUE}Building image for ${target_names[$target]} (${target})${NC}"
     cd "$PROJECT_DIR"
-    source build/poky/oe-init-build-env "$build_dir"
+    source poky/oe-init-build-env "$build_dir"
 
     echo -e "${YELLOW}Starting build...${NC}"
-    bitbake robotics-image
+    bitbake robotics-controller-image
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Build successful!${NC}"
@@ -258,7 +274,7 @@ clean_build() {
 
     echo -e "${BLUE}Cleaning build directory for ${target_names[$target]} (${target})${NC}"
     cd "$PROJECT_DIR"
-    source build/poky/oe-init-build-env "$build_dir"
+    source poky/oe-init-build-env "$build_dir"
 
     echo -e "${YELLOW}Cleaning sstate-cache and tmp directories...${NC}"
     rm -rf "$PWD/tmp" "$PWD/sstate-cache"
@@ -279,7 +295,7 @@ run_qemu() {
 
     echo -e "${BLUE}Running QEMU virtual machine${NC}"
     cd "$PROJECT_DIR"
-    source build/poky/oe-init-build-env "$build_dir"
+    source poky/oe-init-build-env "$build_dir"
 
     echo -e "${YELLOW}Starting QEMU...${NC}"
     echo -e "Press Ctrl+A, X to exit QEMU"

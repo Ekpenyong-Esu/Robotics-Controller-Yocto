@@ -81,8 +81,17 @@ EOF
 check_yocto() {
     log_info "Checking Yocto environment..."
 
-    if [ ! -d "${BUILD_DIR}/poky" ]; then
-        log_error "Yocto environment not set up. Run './scripts/build.sh' first"
+    # Check for required submodules (poky, meta-openembedded)
+    local missing_submodules=()
+    if [ ! -d "${PROJECT_ROOT}/poky" ]; then
+        missing_submodules+=("poky")
+    fi
+    if [ ! -d "${PROJECT_ROOT}/meta-openembedded" ]; then
+        missing_submodules+=("meta-openembedded")
+    fi
+    if [ ${#missing_submodules[@]} -ne 0 ]; then
+        log_error "Required submodules missing: ${missing_submodules[*]}"
+        log_info "Run: git submodule update --init --recursive in the project root."
         exit 1
     fi
 
@@ -153,88 +162,81 @@ run_qemu() {
     # Check Yocto environment
     check_yocto
 
-    # Check if build is completed
-    if [ ! -d "${BUILD_DIR}/tmp/deploy/images" ]; then
+    # Check if build is completed - look in both possible build directories
+    local deploy_dir=""
+    if [ -d "${BUILD_DIR}/build/tmp/deploy/images" ]; then
+        deploy_dir="${BUILD_DIR}/build/tmp/deploy/images"
+    elif [ -d "${BUILD_DIR}/tmp/deploy/images" ]; then
+        deploy_dir="${BUILD_DIR}/tmp/deploy/images"
+    else
         log_error "No images found in the build directory"
         log_info "Build your Yocto image first with:"
-        log_info "  cd ${BUILD_DIR} && source setup-environment"
-        log_info "  bitbake robotics-controller-image"
+        log_info "  ./scripts/build.sh --qemu"
         exit 1
     fi
 
     # Check if machine-specific images exist
-    local machine_deploy_dir="${BUILD_DIR}/tmp/deploy/images/$machine"
+    local machine_deploy_dir="$deploy_dir/$machine"
     if [ ! -d "$machine_deploy_dir" ]; then
         log_error "No images found for machine: $machine"
         log_info "Available machines:"
-        ls -la "${BUILD_DIR}/tmp/deploy/images/" 2>/dev/null || echo "No machine directories found"
+        ls -la "$deploy_dir/" 2>/dev/null || echo "No machine directories found"
         log_info ""
         log_info "Build the image for your target machine:"
-        log_info "  cd ${BUILD_DIR} && source setup-environment"
-        log_info "  export MACHINE=$machine"
-        log_info "  bitbake robotics-controller-image"
+        log_info "  ./scripts/build.sh --qemu"
         exit 1
     fi
 
-    log_info "Setting up Yocto QEMU environment..."
+    log_info "Setting up QEMU environment..."
 
-    # Source the environment to get access to runqemu
-    cd "${BUILD_DIR}"
+    # Change to the correct build directory
+    local build_subdir="${BUILD_DIR}"
+    if [ -d "${BUILD_DIR}/build" ]; then
+        build_subdir="${BUILD_DIR}/build"
+    fi
 
-    # Generate a script to run qemu with appropriate options in project root
-    cat > "${PROJECT_ROOT}/run_qemu.sh" << EOF
-#!/bin/bash
-cd "${BUILD_DIR}"
-source poky/oe-init-build-env
+    cd "$build_subdir"
 
-# QEMU options
-QEMU_OPTS=""
+    # Build QEMU command options
+    local qemu_opts=""
 
-# Add network if requested
-if [ "$enable_network" = true ]; then
-    QEMU_OPTS="\$QEMU_OPTS slirp"
-    echo "Network enabled - SSH and web ports will be forwarded"
-fi
+    # Add network if requested
+    if [ "$enable_network" = "true" ]; then
+        qemu_opts="$qemu_opts slirp"
+        log_info "Network enabled - SSH and web ports will be forwarded"
+    fi
 
-# Add graphics if requested
-if [ "$enable_graphics" = false ]; then
-    QEMU_OPTS="\$QEMU_OPTS nographic"
-else
-    echo "Graphics enabled - GUI will be displayed"
-fi
+    # Add graphics if requested
+    if [ "$enable_graphics" = "false" ]; then
+        qemu_opts="$qemu_opts nographic"
+        log_info "Display: console mode"
+    else
+        log_info "Display: graphics mode"
+    fi
 
-# Add memory settings
-if [ -n "$memory" ]; then
-    QEMU_OPTS="\$QEMU_OPTS qemuparams='-m $memory'"
-    echo "Memory set to $memory"
-fi
+    # Add memory settings
+    if [ -n "$memory" ]; then
+        qemu_opts="$qemu_opts qemuparams=\"-m $memory\""
+        log_info "Memory set to $memory"
+    fi
 
-# Add debug if requested
-if [ "$debug" = true ]; then
-    QEMU_OPTS="\$QEMU_OPTS qemuparams='-d guest_errors,unimp'"
-    echo "Debug mode enabled"
-fi
+    # Add debug if requested
+    if [ "$debug" = "true" ]; then
+        qemu_opts="$qemu_opts qemuparams=\"-d guest_errors,unimp\""
+        log_info "Debug mode enabled"
+    fi
 
-echo "Starting QEMU emulation for: $machine"
-echo "Control commands:"
-echo "  Ctrl+A, X to quit"
-echo "  Ctrl+A, C for QEMU console"
-echo ""
-echo "Launching virtual machine..."
-echo ""
+    log_info "Starting QEMU emulation for: $machine"
+    log_info ""
+    log_info "Control commands:"
+    log_info "  Ctrl+A, X to quit"
+    log_info "  Ctrl+A, C for QEMU console"
+    log_info ""
+    log_success "Launching virtual machine..."
 
-# Run QEMU with the selected machine
-runqemu $machine \$QEMU_OPTS
-EOF
-
-    chmod +x "${PROJECT_ROOT}/run_qemu.sh"
-
-    log_info "Launching QEMU with runqemu for $machine..."
-    log_info "Use Ctrl+A X to exit QEMU"
-    log_info "Starting QEMU in 3 seconds..."
-    sleep 3
-
-    exec "${PROJECT_ROOT}/run_qemu.sh"
+    # Source environment and run QEMU directly
+    source ../poky/oe-init-build-env > /dev/null
+    eval "exec runqemu $machine $qemu_opts"
 }
 
 connect_hardware() {

@@ -3,23 +3,21 @@
 # Yocto Robotics Controller Build Script
 # Sets up the Yocto Project environment and manages the build process
 
-set -euo pipefail  # Exit on error, undefined variables, and pipe failures
+#set -euo pipefail  # Exit on error, undefined variables, and pipe failures
 
 # Configuration
-YOCTO_VERSION="scarthgap"
-POKY_URL="git://git.yoctoproject.org/poky"
+YOCTO_VERSION="kirkstone"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${PROJECT_ROOT}/build"
-META_DIR="${PROJECT_ROOT}/meta-robotics"
 
 # Constants
 readonly MIN_DISK_SPACE_GB=50
 readonly MIN_DISK_SPACE_KB=$((MIN_DISK_SPACE_GB * 1024 * 1024))
 
 # Default configuration
+
 DEFAULT_MACHINE="beaglebone-robotics"
-VERBOSE=false
-CLEAN_BUILD=false
+
 
 # Colors for output
 RED='\033[0;31m'
@@ -81,27 +79,26 @@ EOF
 check_dependencies() {
     log_info "Checking system dependencies for Yocto..."
 
-    local deps=("git" "python3" "chrpath" "diffstat" "gawk" "texinfo" "unzip" "gcc" "make" "chrpath" "socat" "cpio" "xz-utils" "rsync")
+
+    local deps=(
+        "git" "python3" "chrpath" "diffstat" "gawk" "texinfo" "unzip" "gcc" "make" "chrpath" "socat" "cpio" "xz-utils" "rsync"
+    )
+    local extended_deps=(
+        "libffi-dev" "libssl-dev" "zlib1g-dev" "libbz2-dev" "libreadline-dev" "libsqlite3-dev" "libncurses5-dev" "libgdbm-dev" "liblzma-dev" "tk-dev" "uuid-dev"
+    )
     local missing_deps=()
+    local missing_ext=()
 
     for dep in "${deps[@]}"; do
-        case "$dep" in
-                "build-essential"|"xz-utils"|"libegl1-mesa"|"texinfo")
-                    if ! dpkg -l "$dep" &>/dev/null; then
-                        missing_deps+=("$dep")
-                    fi
-                    ;;
-                "gcc")
-                    if ! command -v gcc &>/dev/null; then
-                        missing_deps+=("build-essential")
-                    fi
-                    ;;
-                *)
-                    if ! command -v "$dep" &> /dev/null; then
-                        missing_deps+=("$dep")
-                    fi
-                    ;;
-            esac
+        if ! dpkg -s "$dep" &>/dev/null && ! command -v "$dep" &>/dev/null; then
+            missing_deps+=("$dep")
+        fi
+    done
+
+    for dep in "${extended_deps[@]}"; do
+        if ! dpkg -s "$dep" &>/dev/null; then
+            missing_ext+=("$dep")
+        fi
     done
 
     # Check for Python modules
@@ -113,9 +110,15 @@ check_dependencies() {
     done
 
     if [ ${#missing_deps[@]} -ne 0 ]; then
-        log_error "Missing dependencies: ${missing_deps[*]}"
+        log_error "Missing basic dependencies: ${missing_deps[*]}"
         log_info "Install them with: sudo apt update && sudo apt install -y gawk wget git diffstat unzip texinfo gcc build-essential chrpath socat cpio python3 python3-pip python3-pexpect xz-utils debianutils iputils-ping python3-git python3-jinja2 libegl1-mesa libsdl1.2-dev xterm python3-subunit mesa-common-dev zstd liblz4-tool rsync"
         exit 1
+    fi
+
+    if [ ${#missing_ext[@]} -ne 0 ]; then
+        log_warn "Some additional host libraries required for Python/Perl native builds are missing: ${missing_ext[*]}"
+        log_warn "These are needed for modules like _ctypes, ssl, bz2, lzma, sqlite3, readline, etc."
+        log_info "Install them with: sudo apt install -y ${missing_ext[*]}"
     fi
 
     # Check for minimum disk space
@@ -135,225 +138,105 @@ setup_yocto() {
 
     mkdir -p "$BUILD_DIR"
 
-    # Clone or update poky if not present
-    if [ ! -d "${BUILD_DIR}/poky" ]; then
-        log_info "Cloning Yocto/Poky repository..."
-        git clone -b "${YOCTO_VERSION}" git://git.yoctoproject.org/poky "${BUILD_DIR}/poky" || {
-            log_error "Failed to clone Poky repository"
-            exit 1
-        }
-    else
-        log_info "Poky repository already exists"
-        cd "${BUILD_DIR}/poky"
-        git pull || log_warn "Could not update Poky repository"
-        cd "${PROJECT_ROOT}"
+    # Check for submodules (poky, meta-openembedded)
+    if [ ! -d "${PROJECT_ROOT}/poky" ] || [ ! -d "${PROJECT_ROOT}/meta-openembedded" ]; then
+        log_error "Required submodules (poky, meta-openembedded) are missing."
+        log_info "Please run: git submodule update --init --recursive"
+        exit 1
     fi
 
-    # Clone or update meta-openembedded if not present
-    if [ ! -d "${BUILD_DIR}/meta-openembedded" ]; then
-        log_info "Cloning meta-openembedded repository..."
-        git clone -b "${YOCTO_VERSION}" git://git.openembedded.org/meta-openembedded "${BUILD_DIR}/meta-openembedded" || {
-            log_warn "Failed to clone meta-openembedded repository, continuing anyway"
-        }
-    else
-        cd "${BUILD_DIR}/meta-openembedded"
-        git pull || log_warn "Could not update meta-openembedded repository"
-        cd "${PROJECT_ROOT}"
-    fi
+    log_success "All required submodules are present."
 }
 
 # Setup robotics layers and configurations
 setup_layers() {
     log_info "Setting up robotics layer..."
 
-    # Auto-populate entire meta-robotics layer
+    # Auto-populate entire meta-robotics layer only if it does not exist
     local manage_recipe_script="${PROJECT_ROOT}/scripts/manage-recipe.sh"
-    if [ -x "$manage_recipe_script" ]; then
-        log_info "Auto-populating meta-robotics layer (industrial automation)..."
-        "$manage_recipe_script" auto-populate --force
+    if [ ! -d "${PROJECT_ROOT}/meta-robotics" ]; then
+        if [ -x "$manage_recipe_script" ]; then
+            log_info "Auto-populating meta-robotics layer (industrial automation)..."
+            "$manage_recipe_script" auto-populate --force
 
-        log_info "Final validation of meta-robotics layer..."
-        "$manage_recipe_script" validate
+            log_info "Final validation of meta-robotics layer..."
+            "$manage_recipe_script" validate
+        else
+            log_error "Recipe management script not found - cannot auto-populate meta-robotics layer"
+            exit 1
+        fi
     else
-        log_error "Recipe management script not found - cannot auto-populate meta-robotics layer"
-        exit 1
+        log_info "meta-robotics layer already exists, skipping auto-populate."
     fi
 
-    # Copy our meta-robotics layer to build dir for consistent access
-    if [ ! -d "${BUILD_DIR}/meta-robotics" ]; then
-        log_info "Copying meta-robotics layer to build directory..."
-        cp -r "${PROJECT_ROOT}/meta-robotics" "${BUILD_DIR}/meta-robotics"
+    # Always sync meta-robotics if it exists in project root
+    if [ -d "${PROJECT_ROOT}/meta-robotics" ]; then
+        log_info "Synchronizing meta-robotics layer with build directory (always, minimal and modular)..."
+        rsync -av --delete --exclude='.git' --exclude='*.swp' --exclude='*.bak' "${PROJECT_ROOT}/meta-robotics/" "${BUILD_DIR}/meta-robotics/"
     else
-        log_info "Updating meta-robotics layer in build directory..."
-        rsync -av --delete "${PROJECT_ROOT}/meta-robotics/" "${BUILD_DIR}/meta-robotics/"
+        log_warn "meta-robotics layer does not exist in project root, skipping sync."
     fi
 
-    # Create build conf directory if it doesn't exist
+    # Copy only the machine-specific conf template to build/conf
     mkdir -p "${BUILD_DIR}/conf"
-
-    # Setup Raspberry Pi layer if needed
-    local rpi_layer_path="${BUILD_DIR}/meta-raspberrypi"
-    if [ ! -d "$rpi_layer_path" ] && [[ "$MACHINE" == "raspberrypi3" || "$MACHINE" == "rpi4-robotics" ]]; then
-        log_info "Cloning meta-raspberrypi layer..."
-        git clone -b "${YOCTO_VERSION}" git://git.yoctoproject.org/meta-raspberrypi "$rpi_layer_path" || {
-            log_warn "Failed to clone meta-raspberrypi repository, continuing anyway"
-        }
-    fi
-
-    # Create local.conf if it doesn't exist
-    if [ ! -f "${BUILD_DIR}/conf/local.conf" ]; then
-        log_info "Creating local.conf from template..."
-
-        # Determine machine-specific template directory
-        local machine_config_dir=""
-        case "${MACHINE:-$DEFAULT_MACHINE}" in
-            "raspberrypi3")
-                machine_config_dir="rpi3-config"
-                ;;
-            "rpi4-robotics")
-                machine_config_dir="rpi4-config"
-                ;;
-            "beaglebone-robotics")
-                machine_config_dir="beaglebone-config"
-                ;;
-            "qemu-robotics")
-                machine_config_dir="qemu-config"
-                ;;
-        esac
-
-        # Try machine-specific template first, then fall back to generic
-        local template_used=false
-        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf" ]; then
-            log_info "Using machine-specific template: ${machine_config_dir}/local.conf"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf" "${BUILD_DIR}/conf/local.conf"
-            template_used=true
-        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" ]; then
-            log_info "Using generic template: local.conf"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" "${BUILD_DIR}/conf/local.conf"
-            template_used=true
+    local machine_config_dir=""
+    case "${MACHINE:-$DEFAULT_MACHINE}" in
+        "raspberrypi3")
+            machine_config_dir="rpi3-config";;
+        "rpi4-robotics")
+            machine_config_dir="rpi4-config";;
+        "beaglebone-robotics")
+            machine_config_dir="beaglebone-config";;
+        "qemu-robotics")
+            machine_config_dir="qemu-config";;
+    esac
+    if [ -n "$machine_config_dir" ] && [ -d "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}" ]; then
+        log_info "Copying conf files for $MACHINE from template: ${machine_config_dir}"
+        cp -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/local.conf" "${BUILD_DIR}/conf/local.conf"
+        if [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" ]; then
+            cp -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
         fi
-
-        # Create default configuration if no template found
-        if [ "$template_used" = false ]; then
-            log_info "No template found, creating default local.conf"
-            cat > "${BUILD_DIR}/conf/local.conf" << EOF
-MACHINE ?= "${MACHINE:-beaglebone-robotics}"
-DISTRO ?= "poky"
-PACKAGE_CLASSES ?= "package_rpm"
-EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
-USER_CLASSES ?= "buildstats"
-PATCHRESOLVE = "noop"
-BB_DISKMON_DIRS ??= "\${TMPDIR} \${DL_DIR} \${SSTATE_DIR} \${WORKDIR}"
-CONF_VERSION = "2"
-EOF
+    else
+        log_info "No machine-specific conf template found, using generic if available."
+        if [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" ]; then
+            cp -f "${PROJECT_ROOT}/meta-robotics/conf/templates/local.conf" "${BUILD_DIR}/conf/local.conf"
+        fi
+        if [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" ]; then
+            cp -f "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
         fi
     fi
 
-    # Create bblayers.conf if it doesn't exist
-    if [ ! -f "${BUILD_DIR}/conf/bblayers.conf" ]; then
-        log_info "Creating bblayers.conf from template..."
-
-        # Determine machine-specific template directory (reuse from local.conf logic)
-        local machine_config_dir=""
-        case "${MACHINE:-$DEFAULT_MACHINE}" in
-            "raspberrypi3")
-                machine_config_dir="rpi3-config"
-                ;;
-            "rpi4-robotics")
-                machine_config_dir="rpi4-config"
-                ;;
-            "beaglebone-robotics")
-                machine_config_dir="beaglebone-config"
-                ;;
-            "qemu-robotics")
-                machine_config_dir="qemu-config"
-                ;;
-        esac
-
-        # Try machine-specific template first, then fall back to generic
-        local template_used=false
-        if [ -n "$machine_config_dir" ] && [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" ]; then
-            log_info "Using machine-specific template: ${machine_config_dir}/bblayers.conf"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/${machine_config_dir}/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
-            template_used=true
-        elif [ -f "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" ]; then
-            log_info "Using generic template: bblayers.conf"
-            cp "${PROJECT_ROOT}/meta-robotics/conf/templates/bblayers.conf" "${BUILD_DIR}/conf/bblayers.conf"
-            template_used=true
+    # Check for meta-raspberrypi submodule if needed
+    if [[ "$MACHINE" == "raspberrypi3" || "$MACHINE" == "rpi4-robotics" ]]; then
+        if [ ! -d "${PROJECT_ROOT}/meta-raspberrypi" ]; then
+            log_error "Required submodule 'meta-raspberrypi' is missing."
+            log_info "Please run: git submodule update --init --recursive"
+            exit 1
         fi
-
-        # Create default configuration if no template found
-        if [ "$template_used" = false ]; then
-            log_info "No template found, creating default bblayers.conf"
-            cat > "${BUILD_DIR}/conf/bblayers.conf" << EOF
-# POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
-# changes incompatibly
-POKY_BBLAYERS_CONF_VERSION = "2"
-
-BBPATH = "\${TOPDIR}"
-BBFILES ?= ""
-
-BBLAYERS ?= " \\
-  \${TOPDIR}/../poky/meta \\
-  \${TOPDIR}/../poky/meta-poky \\
-  \${TOPDIR}/../poky/meta-yocto-bsp \\
-  \${TOPDIR}/../meta-openembedded/meta-oe \\
-  \${TOPDIR}/../meta-openembedded/meta-python \\
-  \${TOPDIR}/../meta-openembedded/meta-networking \\
-  \${TOPDIR}/../meta-openembedded/meta-multimedia \\
-  \${TOPDIR}/../meta-robotics \\
-  "
-EOF
+        # Optionally sync/copy meta-raspberrypi to build dir if needed by your workflow
+        if [ ! -d "${BUILD_DIR}/meta-raspberrypi" ]; then
+            log_info "Copying meta-raspberrypi layer to build directory..."
+            cp -r "${PROJECT_ROOT}/meta-raspberrypi" "${BUILD_DIR}/meta-raspberrypi"
+        else
+            log_info "Updating meta-raspberrypi layer in build directory..."
+            rsync -av --delete "${PROJECT_ROOT}/meta-raspberrypi/" "${BUILD_DIR}/meta-raspberrypi/"
         fi
     fi
-}
-# Configure Yocto for build
-configure_build() {
-    local machine_name="${MACHINE:-$DEFAULT_MACHINE}"
-    log_info "Configuring Yocto build for ${machine_name}..."
-
-    # Update machine in local.conf
-    sed -i "s/^MACHINE ?=.*/MACHINE ?= \"${machine_name}\"/" "${BUILD_DIR}/conf/local.conf"
-
-    # If QEMU was selected, override with qemu machine
-    if [ "$USE_QEMU" = true ]; then
-        log_info "Configuring for QEMU testing..."
-        sed -i "s/^MACHINE ?=.*/MACHINE ?= \"qemu-robotics\"/" "${BUILD_DIR}/conf/local.conf"
-
-        # Add QEMU options for better performance
-        if ! grep -q "PACKAGECONFIG:append:pn-qemu" "${BUILD_DIR}/conf/local.conf"; then
-            echo 'PACKAGECONFIG:append:pn-qemu-native = " sdl"' >> "${BUILD_DIR}/conf/local.conf"
-            echo 'PACKAGECONFIG:append:pn-nativesdk-qemu = " sdl"' >> "${BUILD_DIR}/conf/local.conf"
-        fi
-    fi
-
-    log_success "Build configuration updated"
 }
 
 # Initialize Yocto build environment
 initialize_build() {
     log_info "Initializing Yocto build environment..."
 
-    # Source the setup script to set up environment
-    cd "${BUILD_DIR}/poky"
-
     # Generate setup script for later use
     cat > "${BUILD_DIR}/setup-environment" << 'EOF'
 #!/bin/bash
-. poky/oe-init-build-env build
+cd "$(dirname "${BASH_SOURCE[0]}")"
+source ../poky/oe-init-build-env .
 EOF
     chmod +x "${BUILD_DIR}/setup-environment"
 
-    # Show success message but note we're not executing the script in this shell
-    # as it would change the current shell environment
     log_success "Build environment setup script created"
-    log_info "To start the build, run: cd ${BUILD_DIR} && source setup-environment"
-    log_info "Then run: bitbake robotics-controller-image"
-
-    # Show message about QEMU if selected
-    if [ "$USE_QEMU" = true ]; then
-        log_info "For QEMU testing after build: runqemu qemu-robotics"
-    fi
 }
 
 # Build the system
@@ -362,38 +245,59 @@ build_system() {
 
     # Set the number of parallel jobs
     if [ -z "$JOBS" ]; then
-        # Auto-detect number of CPU cores
-        JOBS=$(nproc)
-        log_info "Auto-detected $JOBS CPU cores for parallel build"
+        # Auto-detect number of CPU cores and use half to prevent system overload
+        local total_cores
+        total_cores=$(nproc)
+        JOBS=$((total_cores / 2))
+        # Ensure at least 1 job
+        if [ "$JOBS" -lt 1 ]; then
+            JOBS=1
+        fi
+        log_info "Auto-detected $total_cores CPU cores, using $JOBS jobs (half) for parallel build"
     else
         log_info "Using $JOBS parallel jobs"
     fi
 
+    # Determine which image to build
+    local image_name="robotics-controller-image"
+    if [ "$USE_QEMU" = true ]; then
+        image_name="robotics-qemu-image"
+        log_info "Building QEMU-specific image: $image_name"
+    else
+        log_info "Building hardware image: $image_name"
+    fi
+
     # Actually run the build
     log_info "Starting the build process..."
-    cd "${BUILD_DIR}"
-    source setup-environment
 
-    # Execute bitbake with proper error handling
-    if [ -n "${JOBS:-}" ]; then
-        if PARALLEL_MAKE="-j ${JOBS}" bitbake robotics-controller-image; then
-            log_success "Build completed successfully!"
+    # Change to build directory and source the Yocto environment
+    (
+        set -e
+        cd "${BUILD_DIR}"
+        source "${PROJECT_ROOT}/poky/oe-init-build-env" .
+
+        # Execute bitbake with proper error handling
+        if [ -n "${JOBS:-}" ]; then
+            if PARALLEL_MAKE="-j ${JOBS}" bitbake "$image_name"; then
+                log_success "Build completed successfully!"
+            else
+                log_error "Build failed!"
+                exit 1
+            fi
         else
-            log_error "Build failed!"
-            exit 1
+            if bitbake "$image_name"; then
+                log_success "Build completed successfully!"
+            else
+                log_error "Build failed!"
+                exit 1
+            fi
         fi
-    else
-        if bitbake robotics-controller-image; then
-            log_success "Build completed successfully!"
-        else
-            log_error "Build failed!"
-            exit 1
-        fi
-    fi
+    )
 
     if [ "$VERBOSE" = true ]; then
         log_info "Verbose mode enabled. Add 'BB_VERBOSE_LOGS=yes' for more detailed build logs."
     fi
+    log_info "Build process finished. Artifacts will be available in: ${BUILD_DIR}/tmp/deploy/images/${MACHINE:-$DEFAULT_MACHINE}"
 }
 
 # Create convenience output directory
@@ -453,8 +357,15 @@ show_summary() {
 
 # Main execution
 main() {
+
     log_info "Starting Embedded Robotics Controller Setup with Yocto"
     log_info "Project: ${PROJECT_ROOT}"
+
+    # Ensure git submodules are initialized and updated FIRST
+    log_info "Initializing and updating git submodules..."
+    git submodule init
+    git submodule sync
+    git submodule update --recursive
 
     # Create build directory
     mkdir -p "$BUILD_DIR"
@@ -472,7 +383,6 @@ main() {
     # Setup Yocto environment
     setup_yocto
     setup_layers
-    configure_build
     initialize_build
 
     # Build the system
@@ -521,6 +431,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+
+# Ensure MACHINE is set to qemu-robotics before any template selection if --qemu is used
+if [ "$USE_QEMU" = true ]; then
+    MACHINE="qemu-robotics"
+fi
 
 # Run main function
 main

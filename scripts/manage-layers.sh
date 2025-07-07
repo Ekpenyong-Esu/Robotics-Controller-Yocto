@@ -85,7 +85,7 @@ list_layers() {
         echo -e "${YELLOW}From bblayers.conf:${NC}"
         grep -E "meta-|poky" "$PROJECT_DIR/build/conf/bblayers.conf" | sed 's/.*\///' | sed 's/ .*//' | sort | while read -r layer; do
             if [ -n "$layer" ]; then
-                if [ -d "$PROJECT_DIR/build/$layer" ]; then
+                if [ -d "$PROJECT_DIR/$layer" ]; then
                     echo -e "  ${GREEN}✓${NC} $layer (cloned)"
                 else
                     echo -e "  ${RED}✗${NC} $layer (not cloned)"
@@ -98,8 +98,8 @@ list_layers() {
         exit 1
     fi
 
-    echo -e "${YELLOW}Available in build directory:${NC}"
-    find "$PROJECT_DIR/build" -maxdepth 1 -name "meta-*" -type d | while read -r dir; do
+    echo -e "${YELLOW}Available in project root:${NC}"
+    find "$PROJECT_DIR" -maxdepth 1 -name "meta-*" -type d | while read -r dir; do
         layer_name=$(basename "$dir")
         if grep -q "$layer_name" "$PROJECT_DIR/build/conf/bblayers.conf" 2>/dev/null; then
             echo -e "  ${GREEN}✓${NC} $layer_name (active)"
@@ -169,7 +169,7 @@ add_layer() {
     local layer_name="$1"
     local git_url="$2"
     local branch="${3:-scarthgap}"
-    local layer_path="$PROJECT_DIR/build/$layer_name"
+    local layer_path="$PROJECT_DIR/$layer_name"
 
     echo -e "${BLUE}Adding new meta-layer: $layer_name${NC}"
 
@@ -208,7 +208,7 @@ remove_layer() {
     fi
 
     local layer_name="$1"
-    local layer_path="$PROJECT_DIR/build/$layer_name"
+    local layer_path="$PROJECT_DIR/$layer_name"
 
     echo -e "${BLUE}Removing meta-layer: $layer_name${NC}"
 
@@ -240,7 +240,7 @@ update_layer() {
     fi
 
     local layer_name="$1"
-    local layer_path="$PROJECT_DIR/build/$layer_name"
+    local layer_path="$PROJECT_DIR/$layer_name"
 
     if [ ! -d "$layer_path" ]; then
         echo -e "${RED}Error: $layer_name not found at $layer_path${NC}"
@@ -279,7 +279,7 @@ show_layer_info() {
     fi
 
     local layer_name="$1"
-    local layer_path="$PROJECT_DIR/build/$layer_name"
+    local layer_path="$PROJECT_DIR/$layer_name"
 
     if [ ! -d "$layer_path" ]; then
         echo -e "${RED}Error: $layer_name not found at $layer_path${NC}"

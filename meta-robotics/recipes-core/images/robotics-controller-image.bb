@@ -1,48 +1,59 @@
-SUMMARY = "Robotics Controller Image"
-DESCRIPTION = "Custom image for robotics applications"
+SUMMARY = "Robotics Controller Production Image"
+DESCRIPTION = "Production image for robotics controller with C++ backend and web interface. \
+Optimized for embedded robotics applications with hardware control capabilities."
 LICENSE = "MIT"
 
 inherit core-image
 
-# Base packages
+# =================================================================
+# CORE PACKAGES
+# =================================================================
 IMAGE_INSTALL = " \
     packagegroup-core-boot \
-    packagegroup-core-full-cmdline \
-    packagegroup-core-ssh-openssh \
-    kernel-modules \
-    bash \
-    nano \
-    usbutils \
-    i2c-tools \
-    spitools \
-    libgpiod \
-    libgpiod-tools \
-    python3 \
-    python3-pip \
-    opencv \
-    opencv-samples \
-    openssh \
-    connman \
-    connman-client \
-    busybox \
-    vim \
+    systemd \
+    python3-core \
+    python3-json \
     robotics-controller \
+    libgpiod-tools \
+    util-linux \
+    iproute2 \
 "
 
-# Development tools
-IMAGE_FEATURES += " \
-    debug-tweaks \
-    tools-debug \
-    tools-sdk \
-    dev-pkgs \
-    ssh-server-openssh \
+# =================================================================
+# HARDWARE CONTROL PACKAGES
+# =================================================================
+IMAGE_INSTALL:append = " \
+    i2c-tools \
+    kernel-modules \
 "
 
-# Extra space for development work
-IMAGE_ROOTFS_EXTRA_SPACE = "512000"
+# =================================================================
+# DEVELOPMENT TOOLS (Optional - uncomment for debugging)
+# =================================================================
+# IMAGE_INSTALL:append = " \
+#     packagegroup-core-ssh-openssh \
+#     bash \
+#     openssh \
+#     nano \
+#     vim \
+#     strace \
+#     gdb \
+# "
 
-# Enable remote debugging
-EXTRA_IMAGE_FEATURES += "dbg-pkgs"
+# =================================================================
+# SYSTEM CONFIGURATION
+# =================================================================
+# systemd configuration is handled in machine conf files
+# (machine configurations handle init system selection)
 
-# For development convenience
-CORE_IMAGE_EXTRA_INSTALL += "htop git cmake"
+# Image features for production (secure by default)
+IMAGE_FEATURES += " ssh-server-openssh package-management "
+
+# Production deployment - no empty passwords or root login
+# For development, use robotics-dev-image.bb instead
+
+# Add space for applications (512MB)
+IMAGE_ROOTFS_EXTRA_SPACE = "524288"
+
+# Set filesystem types
+IMAGE_FSTYPES = "ext4 tar.bz2"

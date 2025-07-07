@@ -116,7 +116,7 @@ sync_configs() {
         log_info "Copying configuration files..."
 
         # Create config directory in recipe files
-        mkdir -p "${recipe_files_dir}/config"
+        #mkdir -p "${recipe_files_dir}/config"
 
         # Copy all config files
         if [ "$verbose" = true ]; then
@@ -146,9 +146,6 @@ sync_configs() {
         log_info "Creating init script..."
         create_init_script "${recipe_files_dir}/robotics-controller-init"
     fi
-
-    # Copy any additional recipe-specific files
-    sync_recipe_extras
 }
 
 # Create systemd service file automatically
@@ -176,19 +173,6 @@ EOF
     log_success "Created systemd service file: $service_file"
 }
 
-# Sync additional recipe files (scripts, etc.)
-sync_recipe_extras() {
-    local recipe_files_dir="${RECIPE_DIR}/files"
-
-    # Copy any additional scripts from src/scripts (excluding manage-recipe.sh and init script)
-    if [ -d "${SRC_DIR}/scripts" ]; then
-        mkdir -p "${recipe_files_dir}/scripts"
-        find "${SRC_DIR}/scripts" -name "*.sh" -not -name "manage-recipe.sh" -not -name "*-init" -exec cp {} "${recipe_files_dir}/scripts/" \;
-
-        # Also copy any other script files (non-.sh)
-        find "${SRC_DIR}/scripts" -type f -not -name "*.sh" -not -name "manage-recipe.sh" -not -name "*-init" -exec cp {} "${recipe_files_dir}/scripts/" \;
-    fi
-}
 
 # Create init script automatically
 create_init_script() {
@@ -663,39 +647,55 @@ create_image_recipes() {
     local image_dir="${META_ROBOTICS_DIR}/recipes-core/images"
 
     # Main robotics image
-    cat > "${image_dir}/robotics-image.bb" << 'EOF'
-DESCRIPTION = "Robotics Controller Linux Image"
+    cat > "${image_dir}/robotics-controller-image.bb" << 'EOF'
+SUMMARY = "Robotics Controller Image"
+DESCRIPTION = "Custom image for robotics applications"
 LICENSE = "MIT"
 
-# Base image
-require recipes-core/images/core-image-minimal.bb
+inherit core-image
 
-# Essential robotics packages
-IMAGE_INSTALL:append = " \
-    robotics-controller \
-    opencv \
-    python3 \
-    python3-opencv \
-    i2c-tools \
-    spi-tools \
-    gpio-utils \
-    systemd \
-    systemd-networkd \
-    openssh \
-    htop \
+# Base packages
+IMAGE_INSTALL = " \
+    packagegroup-core-boot \
+    packagegroup-core-full-cmdline \
+    packagegroup-core-ssh-openssh \
+    kernel-modules \
+    bash \
     nano \
+    usbutils \
+    i2c-tools \
+    spitools \
+    libgpiod \
+    libgpiod-tools \
+    python3 \
+    python3-pip \
+    opencv \
+    opencv-samples \
+    openssh \
+    connman \
+    connman-client \
+    busybox \
+    vim \
+    robotics-controller \
 "
 
-# Development tools (optional)
-IMAGE_INSTALL:append = " \
+# Development tools and debugging
+IMAGE_INSTALL += " \
     gdb \
     strace \
     tcpdump \
     iperf3 \
+    htop \
 "
 
-# Set root password (change in production)
-EXTRA_USERS_PARAMS = "usermod -P robotics root;"
+# Additional tools for robotics development
+IMAGE_INSTALL += " \
+    git \
+    rsync \
+    python3-dev \
+    cmake \
+    pkg-config \
+"
 
 # Enable systemd
 DISTRO_FEATURES:append = " systemd"
@@ -704,7 +704,15 @@ DISTRO_FEATURES_BACKFILL_CONSIDERED += "sysvinit"
 VIRTUAL-RUNTIME_initscripts = ""
 
 # Image features
-IMAGE_FEATURES += "ssh-server-openssh"
+IMAGE_FEATURES += " \
+    debug-tweaks \
+    tools-debug \
+    ssh-server-openssh \
+    package-management \
+"
+
+# Add additional space to the rootfs for applications
+IMAGE_ROOTFS_EXTRA_SPACE = "524288"
 EOF
 
     # Development image with more tools
@@ -713,7 +721,7 @@ DESCRIPTION = "Robotics Controller Development Image"
 LICENSE = "MIT"
 
 # Base robotics image
-require robotics-image.bb
+require robotics-controller-image.bb
 
 # Development packages
 IMAGE_INSTALL:append = " \

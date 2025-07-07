@@ -39,12 +39,14 @@ OPTIONS:
     -b, --build-only    Clean only build outputs (keep downloads)
     -c, --cache         Clean shared state cache
     -d, --downloads     Clean only downloads
+    -r, --recipe NAME   Clean specific recipe (e.g., rust-llvm-native)
     -f, --force         Force clean without confirmation
 
 EXAMPLES:
-    $0                  # Standard clean (build outputs only)
-    $0 --all            # Clean everything including downloads
-    $0 --cache          # Clean only package cache
+    $0                           # Standard clean (build outputs only)
+    $0 --all                     # Clean everything including downloads
+    $0 --cache                   # Clean only package cache
+    $0 --recipe rust-llvm-native # Clean specific recipe
 
 EOF
 }
@@ -162,8 +164,100 @@ clean_meta_robotics() {
     fi
 }
 
+clean_specific_recipe() {
+    local recipe_name="$1"
+
+    if [ -z "$recipe_name" ]; then
+        log_warn "Recipe name not specified"
+        return 1
+    fi
+
+    log_info "Cleaning specific recipe: $recipe_name"
+
+    if [ ! -d "$BUILD_DIR" ]; then
+        log_warn "Build directory does not exist: $BUILD_DIR"
+        return 1
+    fi
+
+    # Source the Yocto environment to use bitbake commands
+    local setup_env="$BUILD_DIR/../poky/oe-init-build-env"
+    if [ ! -f "$setup_env" ]; then
+        log_warn "Yocto environment setup script not found: $setup_env"
+        log_info "Falling back to manual cleanup..."
+    else
+        log_info "Using bitbake to clean recipe: $recipe_name"
+        cd "$BUILD_DIR"
+
+        # Source environment and run bitbake clean commands
+        set +e  # Don't exit on error for these commands
+        . "$setup_env" "$BUILD_DIR" > /dev/null 2>&1
+
+        # Clean the recipe work directory
+        bitbake -c cleanall "$recipe_name" 2>/dev/null
+
+        # Also clean the recipe's sstate
+        bitbake -c cleansstate "$recipe_name" 2>/dev/null
+
+        set -e  # Re-enable exit on error
+
+        if [ $? -eq 0 ]; then
+            log_success "Successfully cleaned recipe: $recipe_name using bitbake"
+            return 0
+        else
+            log_warn "bitbake clean failed, falling back to manual cleanup..."
+        fi
+    fi
+
+    # Manual cleanup fallback
+    log_info "Performing manual cleanup for recipe: $recipe_name"
+
+    # Clean work directories
+    if [ -d "$BUILD_DIR/tmp/work" ]; then
+        find "$BUILD_DIR/tmp/work" -name "*${recipe_name}*" -type d | while read -r dir; do
+            if [ -d "$dir" ]; then
+                log_info "Removing work directory: $(basename "$dir")"
+                rm -rf "$dir"
+            fi
+        done
+    fi
+
+    # Clean sstate cache for the specific recipe
+    if [ -d "$BUILD_DIR/sstate-cache" ]; then
+        find "$BUILD_DIR/sstate-cache" -name "*${recipe_name}*" | while read -r file; do
+            if [ -f "$file" ]; then
+                log_info "Removing sstate file: $(basename "$file")"
+                rm -f "$file"
+            fi
+        done
+    fi
+
+    # Clean stamps
+    if [ -d "$BUILD_DIR/tmp/stamps" ]; then
+        find "$BUILD_DIR/tmp/stamps" -name "*${recipe_name}*" | while read -r file; do
+            if [ -f "$file" ]; then
+                log_info "Removing stamp file: $(basename "$file")"
+                rm -f "$file"
+            fi
+        done
+    fi
+
+    # Clean deploy directory
+    if [ -d "$BUILD_DIR/tmp/deploy" ]; then
+        find "$BUILD_DIR/tmp/deploy" -name "*${recipe_name}*" | while read -r file; do
+            if [ -f "$file" ]; then
+                log_info "Removing deploy file: $(basename "$file")"
+                rm -f "$file"
+            fi
+        done
+    fi
+
+    log_success "Manual cleanup completed for recipe: $recipe_name"
+}
+
+
+# Standalone disk usage reporting
 show_disk_usage() {
-    log_info "Disk usage before clean:"
+    log_info "Disk usage for build directory:"
     if [ -d "$BUILD_DIR" ]; then
         du -sh "$BUILD_DIR" 2>/dev/null || echo "Build directory not found"
     else
@@ -189,8 +283,10 @@ confirm_action() {
 main() {
     log_info "Robotics Controller Build Cleaner"
 
-    # Show current disk usage
-    show_disk_usage
+    if [ "$CLEAN_TYPE" = "disk-usage" ]; then
+        show_disk_usage
+        exit 0
+    fi
 
     case "$CLEAN_TYPE" in
         "all")
@@ -212,6 +308,14 @@ main() {
             clean_meta_robotics
             clean_build_outputs
             ;;
+        "recipe")
+            if [ -z "$RECIPE_NAME" ]; then
+                echo "Error: Recipe name must be specified with --recipe option"
+                exit 1
+            fi
+            [ "$FORCE" != true ] && confirm_action "clean recipe: $RECIPE_NAME"
+            clean_specific_recipe "$RECIPE_NAME"
+            ;;
         *)
             [ "$FORCE" != true ] && confirm_action "clean build outputs (keeping downloads)"
             clean_meta_robotics
@@ -220,21 +324,15 @@ main() {
     esac
 
     log_success "Clean operation completed"
-
-    # Show disk usage after clean
-    log_info "Disk usage after clean:"
-    if [ -d "$BUILD_DIR" ]; then
-        du -sh "$BUILD_DIR" 2>/dev/null || echo "Build directory removed"
-    else
-        echo "Build directory removed"
-    fi
 }
 
 # Default values
 CLEAN_TYPE="build"
 FORCE=false
+RECIPE_NAME=""
 
 # Parse command line arguments
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
@@ -255,6 +353,19 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--downloads)
             CLEAN_TYPE="downloads"
+            shift
+            ;;
+        -r|--recipe)
+            CLEAN_TYPE="recipe"
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --recipe requires a recipe name"
+                exit 1
+            fi
+            RECIPE_NAME="$2"
+            shift 2
+            ;;
+        --disk-usage)
+            CLEAN_TYPE="disk-usage"
             shift
             ;;
         -f|--force)
