@@ -1,19 +1,13 @@
 CompileFlags:
-  Remove: [-W*, -w]  # Disable noisy warnings for editor experience
-  Add:
-    # System OpenCV headers
-    - -I/usr/include/opencv4
-    # Project source directories
-    - -I/home/mahon/Robotics-Controller-Yocto/src
-    - -I/home/mahon/Robotics-Controller-Yocto/src/robotics-controller
-    # Build directory for generated files (version.hpp)
-    - -I/home/mahon/Robotics-Controller-Yocto/src/build
-    - -I/home/mahon/Robotics-Controller-Yocto/src/build/robotics-controller
-    # External dependencies include paths
-    - -I/home/mahon/Robotics-Controller-Yocto/src/build/_deps/nlohmann_json-src/include
-    # Preprocessor definitions
-    - -DHAVE_OPENCV=1
-    - -DROBOTICS_VERSION_MAJOR=1
-    - -DROBOTICS_VERSION_MINOR=0
-    - -DROBOTICS_VERSION_PATCH=0
-    - -std=c++17
+    Remove: [-W*, -w] # Disable noisy warnings for editor experience
+    Add:
+        # System OpenCV headers
+        - -I/usr/include/opencv4
+        # Project source directories
+        - -I/home/mahon/Robotics-Controller-Yocto/src
+        - -I/home/mahon/Robotics-Controller-Yocto/src/robotics-controller
+        # Build directory for generated files (including version.hpp)
+        - -I/home/mahon/Robotics-Controller-Yocto/src/build
+        - -I/home/mahon/Robotics-Controller-Yocto/src/build/robotics-controller
+        - -DHAVE_OPENCV=1
+        - -std=c++17

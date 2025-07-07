@@ -61,7 +61,7 @@ FILES:${PN} += " \
 do_install() {
     # Install the compiled binary
     install -d ${D}${bindir}
-    install -m 0755 ${B}/bin/robotics-controller ${D}${bindir}/
+    install -m 0755 ${B}/robotics-controller/robotics-controller ${D}${bindir}/
 
     # Install configuration files
     install -d ${D}${sysconfdir}/robotics-controller
