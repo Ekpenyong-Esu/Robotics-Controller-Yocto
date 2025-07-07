@@ -57,6 +57,9 @@ target_link_libraries(robotics-controller-exe
 
     # System libraries
     Threads::Threads
+    
+    # OpenCV (needed for vision processor headers)
+    opencv
 )
 
 # Link GPIOD if available

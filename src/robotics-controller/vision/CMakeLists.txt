@@ -10,13 +10,8 @@ target_include_directories(vision_processor PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
+# Always link OpenCV - required for vision processing
+target_link_libraries(vision_processor PUBLIC opencv)
+target_compile_definitions(vision_processor PRIVATE HAVE_OPENCV=1)
 
-# Link OpenCV if available
-if(OPENCV_FOUND)
-    target_link_libraries(vision_processor opencv)
-    target_compile_definitions(vision_processor PRIVATE HAVE_OPENCV=1)
-else()
-    message(WARNING "OpenCV not found or not enabled: vision_processor will be built without OpenCV support.")
-endif()
-
-message(STATUS "Vision processor configured")
+message(STATUS "Vision processor configured with OpenCV")

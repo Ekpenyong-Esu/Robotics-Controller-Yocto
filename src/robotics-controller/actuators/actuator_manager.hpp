@@ -15,11 +15,11 @@ public:
     ActuatorManager();
     ~ActuatorManager();
 
-    // Rule of five: delete copy, default move
+    // Rule of five: delete copy and move (due to unique_ptr member management)
     ActuatorManager(const ActuatorManager&) = delete;
     ActuatorManager& operator=(const ActuatorManager&) = delete;
-    ActuatorManager(ActuatorManager&&) noexcept = default;
-    ActuatorManager& operator=(ActuatorManager&&) noexcept = default;
+    ActuatorManager(ActuatorManager&&) = delete;
+    ActuatorManager& operator=(ActuatorManager&&) = delete;
 
     bool initialize();
     void update();

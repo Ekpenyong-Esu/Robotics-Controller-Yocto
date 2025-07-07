@@ -1,16 +1,11 @@
 #pragma once
 #include <memory>
 #include <string>
-#include <vector>
-
-#ifdef HAVE_OPENCV
 
 #include <opencv2/core.hpp>
-
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
-#endif
 
 namespace robotics {
 
@@ -33,11 +28,11 @@ public:
     VisionProcessor();
     ~VisionProcessor();
 
-    // Rule of five: delete copy, default move
+    // Rule of five: delete copy and move (due to complex resource management)
     VisionProcessor(const VisionProcessor&) = delete;
     VisionProcessor& operator=(const VisionProcessor&) = delete;
-    VisionProcessor(VisionProcessor&&) noexcept = default;
-    VisionProcessor& operator=(VisionProcessor&&) noexcept = default;
+    VisionProcessor(VisionProcessor&&) = delete;
+    VisionProcessor& operator=(VisionProcessor&&) = delete;
 
     bool initialize();
     void update();

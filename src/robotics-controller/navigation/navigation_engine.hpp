@@ -9,13 +9,11 @@ public:
     NavigationEngine();
     ~NavigationEngine();
 
-    // Delete copy constructor and copy assignment operator
+    // Delete copy and move constructors (due to complex resource management)
     NavigationEngine(const NavigationEngine&) = delete;
     NavigationEngine& operator=(const NavigationEngine&) = delete;
-
-    // Default move constructor and move assignment operator
-    NavigationEngine(NavigationEngine&&) noexcept = default;
-    NavigationEngine& operator=(NavigationEngine&&) noexcept = default;
+    NavigationEngine(NavigationEngine&&) = delete;
+    NavigationEngine& operator=(NavigationEngine&&) = delete;
 
     bool initialize();
     void update();
