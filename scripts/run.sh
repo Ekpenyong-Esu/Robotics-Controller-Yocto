@@ -7,7 +7,7 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${PROJECT_ROOT}/build"
-DEPLOY_DIR="${BUILD_DIR}/tmp/deploy/images"
+DEPLOY_DIR="${BUILD_DIR}/tmp-glibc/deploy/images"
 
 # Colors for output
 RED='\033[0;31m'
@@ -164,8 +164,10 @@ run_qemu() {
 
     # Check if build is completed - look in both possible build directories
     local deploy_dir=""
-    if [ -d "${BUILD_DIR}/build/tmp/deploy/images" ]; then
-        deploy_dir="${BUILD_DIR}/build/tmp/deploy/images"
+    if [ -d "${BUILD_DIR}/build/tmp-glibc/deploy/images" ]; then
+        deploy_dir="${BUILD_DIR}/build/tmp-glibc/deploy/images"
+    elif [ -d "${BUILD_DIR}/tmp-glibc/deploy/images" ]; then
+        deploy_dir="${BUILD_DIR}/tmp-glibc/deploy/images"
     elif [ -d "${BUILD_DIR}/tmp/deploy/images" ]; then
         deploy_dir="${BUILD_DIR}/tmp/deploy/images"
     else
@@ -198,17 +200,18 @@ run_qemu() {
     cd "$build_subdir"
 
     # Build QEMU command options
-    local qemu_opts=""
+    local qemu_args=()
+    qemu_args+=("$machine")
 
     # Add network if requested
     if [ "$enable_network" = "true" ]; then
-        qemu_opts="$qemu_opts slirp"
+        qemu_args+=("slirp")
         log_info "Network enabled - SSH and web ports will be forwarded"
     fi
 
     # Add graphics if requested
     if [ "$enable_graphics" = "false" ]; then
-        qemu_opts="$qemu_opts nographic"
+        qemu_args+=("nographic")
         log_info "Display: console mode"
     else
         log_info "Display: graphics mode"
@@ -216,13 +219,13 @@ run_qemu() {
 
     # Add memory settings
     if [ -n "$memory" ]; then
-        qemu_opts="$qemu_opts qemuparams=\"-m $memory\""
+        qemu_args+=("qemuparams=-m $memory")
         log_info "Memory set to $memory"
     fi
 
     # Add debug if requested
     if [ "$debug" = "true" ]; then
-        qemu_opts="$qemu_opts qemuparams=\"-d guest_errors,unimp\""
+        qemu_args+=("qemuparams=-d guest_errors,unimp")
         log_info "Debug mode enabled"
     fi
 
@@ -235,8 +238,8 @@ run_qemu() {
     log_success "Launching virtual machine..."
 
     # Source environment and run QEMU directly
-    source ../poky/oe-init-build-env > /dev/null
-    eval "exec runqemu $machine $qemu_opts"
+    source ../poky/oe-init-build-env . > /dev/null
+    exec runqemu "${qemu_args[@]}"
 }
 
 connect_hardware() {

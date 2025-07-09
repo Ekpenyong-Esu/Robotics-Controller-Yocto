@@ -47,6 +47,7 @@ COMMANDS:
     check [BUILD_DIR]       Check if layer is up to date
     list                    List all build directories with meta-robotics
     clean [BUILD_DIR]       Remove meta-robotics layer from build directory
+    cleanup-backups         Remove old backup files (keep last 3)
     validate                Validate meta-robotics layer structure
     help                    Show this help message
 
@@ -65,6 +66,7 @@ EXAMPLES:
     $0 sync build               # Sync to main build directory
     $0 sync build-qemu          # Sync to QEMU build directory
     $0 check                    # Check sync status of all builds
+    $0 cleanup-backups          # Remove old backup files
     $0 validate                 # Validate source layer structure
     $0 list                     # List all build directories
 
@@ -323,6 +325,64 @@ clean_build_dir() {
     log_success "Meta-robotics layer removed from $build_dir_name"
 }
 
+# Clean up old backup files
+cleanup_old_backups() {
+    local keep_backups="${1:-1}"  # Keep last 3 backups by default
+    local dry_run="$2"
+    
+    log_info "Cleaning up old meta-robotics backup files (keeping last $keep_backups)..."
+    
+    local total_removed=0
+    local total_size=0
+    
+    # Find all build directories
+    local build_dirs
+    mapfile -t build_dirs < <(get_build_directories)
+    
+    for build_dir in "${build_dirs[@]}"; do
+        local build_path="$PROJECT_DIR/$build_dir"
+        
+        if [ ! -d "$build_path" ]; then
+            continue
+        fi
+        
+        log_info "Checking backups in: $build_dir"
+        
+        # Find backup directories (both .backup.* and .removed.*)
+        local backup_dirs=()
+        while IFS= read -r -d '' backup_dir; do
+            backup_dirs+=("$backup_dir")
+        done < <(find "$build_path" -maxdepth 1 -type d \( -name "meta-robotics.backup.*" -o -name "meta-robotics.removed.*" \) -print0 | sort -z)
+        
+        if [ ${#backup_dirs[@]} -gt "$keep_backups" ]; then
+            local to_remove=$((${#backup_dirs[@]} - keep_backups))
+            log_info "Found ${#backup_dirs[@]} backups, removing oldest $to_remove"
+            
+            # Remove oldest backups (first in sorted list)
+            for ((i=0; i<to_remove; i++)); do
+                local backup_path="${backup_dirs[i]}"
+                if [ "$dry_run" = "true" ]; then
+                    echo "Would remove: $(basename "$backup_path")"
+                else
+                    local size=$(du -sb "$backup_path" 2>/dev/null | cut -f1 || echo 0)
+                    rm -rf "$backup_path"
+                    log_info "Removed old backup: $(basename "$backup_path") ($(($size / 1024 / 1024))MB)"
+                    total_removed=$((total_removed + 1))
+                    total_size=$((total_size + size))
+                fi
+            done
+        else
+            log_info "Found ${#backup_dirs[@]} backups (within limit of $keep_backups)"
+        fi
+    done
+    
+    if [ "$dry_run" != "true" ] && [ $total_removed -gt 0 ]; then
+        log_success "Cleaned up $total_removed old backups, freed $(($total_size / 1024 / 1024))MB"
+    elif [ $total_removed -eq 0 ]; then
+        log_info "No old backups to clean up"
+    fi
+}
+
 # Main sync function
 main_sync() {
     local target_build_dir="$1"
@@ -421,6 +481,9 @@ case "$COMMAND" in
             exit 1
         fi
         clean_build_dir "$TARGET_BUILD_DIR" "$DRY_RUN"
+        ;;
+    cleanup-backups)
+        cleanup_old_backups 3 "$DRY_RUN"
         ;;
     validate)
         validate_meta_layer

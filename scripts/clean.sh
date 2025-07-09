@@ -39,6 +39,7 @@ OPTIONS:
     -b, --build-only    Clean only build outputs (keep downloads)
     -c, --cache         Clean shared state cache
     -d, --downloads     Clean only downloads
+    -o, --output        Clean only output directory
     -r, --recipe NAME   Clean specific recipe (e.g., rust-llvm-native)
     -f, --force         Force clean without confirmation
 
@@ -46,6 +47,7 @@ EXAMPLES:
     $0                           # Standard clean (build outputs only)
     $0 --all                     # Clean everything including downloads
     $0 --cache                   # Clean only package cache
+    $0 --output                  # Clean only output directory
     $0 --recipe rust-llvm-native # Clean specific recipe
 
 EOF
@@ -55,8 +57,11 @@ clean_build_outputs() {
     log_info "Cleaning Yocto build outputs..."
 
     if [ -d "$BUILD_DIR" ]; then
-        # Clean Yocto build directories
-        if [ -d "$BUILD_DIR/tmp" ]; then
+        # Clean Yocto build directories (check for both tmp and tmp-glibc)
+        if [ -d "$BUILD_DIR/tmp-glibc" ]; then
+            log_info "Removing $BUILD_DIR/tmp-glibc"
+            rm -rf "$BUILD_DIR/tmp-glibc"
+        elif [ -d "$BUILD_DIR/tmp" ]; then
             log_info "Removing $BUILD_DIR/tmp"
             rm -rf "$BUILD_DIR/tmp"
         fi
@@ -66,12 +71,23 @@ clean_build_outputs() {
             log_info "Removing $BUILD_DIR/cache"
             rm -rf "$BUILD_DIR/cache"
         fi
+        
+        # Clean sstate cache if present
+        if [ -d "$BUILD_DIR/sstate-cache" ]; then
+            log_info "Removing $BUILD_DIR/sstate-cache"
+            rm -rf "$BUILD_DIR/sstate-cache"
+        fi
     fi
 
-    # Remove symlinks
-    if [ -L "${PROJECT_ROOT}/output" ]; then
-        log_info "Removing output symlink"
-        rm -f "${PROJECT_ROOT}/output"
+    # Clean output directory (both symlinks and actual directories)
+    if [ -e "${PROJECT_ROOT}/output" ]; then
+        if [ -L "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output symlink"
+            rm -f "${PROJECT_ROOT}/output"
+        elif [ -d "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output directory and all contents"
+            rm -rf "${PROJECT_ROOT}/output"
+        fi
     fi
 }
 
@@ -126,10 +142,15 @@ clean_all() {
         rm -rf "$BUILD_DIR"
     fi
 
-    # Remove symlinks
-    if [ -L "${PROJECT_ROOT}/output" ]; then
-        log_info "Removing output symlink"
-        rm -f "${PROJECT_ROOT}/output"
+    # Clean output directory (both symlinks and actual directories)
+    if [ -e "${PROJECT_ROOT}/output" ]; then
+        if [ -L "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output symlink"
+            rm -f "${PROJECT_ROOT}/output"
+        elif [ -d "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output directory and all contents"
+            rm -rf "${PROJECT_ROOT}/output"
+        fi
     fi
 }
 
@@ -254,6 +275,24 @@ clean_specific_recipe() {
     log_success "Manual cleanup completed for recipe: $recipe_name"
 }
 
+# Clean only output directory
+clean_output_only() {
+    log_info "Cleaning output directory only..."
+
+    # Clean output directory (both symlinks and actual directories)
+    if [ -e "${PROJECT_ROOT}/output" ]; then
+        if [ -L "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output symlink"
+            rm -f "${PROJECT_ROOT}/output"
+        elif [ -d "${PROJECT_ROOT}/output" ]; then
+            log_info "Removing output directory and all contents"
+            rm -rf "${PROJECT_ROOT}/output"
+        fi
+        log_success "Output directory cleaned"
+    else
+        log_info "Output directory does not exist"
+    fi
+}
 
 # Standalone disk usage reporting
 show_disk_usage() {
@@ -302,6 +341,10 @@ main() {
         "downloads")
             [ "$FORCE" != true ] && confirm_action "clean downloaded packages"
             clean_downloads
+            ;;
+        "output")
+            [ "$FORCE" != true ] && confirm_action "clean output directory only"
+            clean_output_only
             ;;
         "build")
             [ "$FORCE" != true ] && confirm_action "clean build outputs (keeping downloads)"
@@ -353,6 +396,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--downloads)
             CLEAN_TYPE="downloads"
+            shift
+            ;;
+        -o|--output)
+            CLEAN_TYPE="output"
             shift
             ;;
         -r|--recipe)

@@ -23,7 +23,6 @@
 
 // Configuration
 #include "config/version.hpp"
-
 volatile bool running = true;
 
 void signal_handler(int signal) {

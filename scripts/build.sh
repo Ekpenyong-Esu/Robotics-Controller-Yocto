@@ -297,7 +297,7 @@ build_system() {
     if [ "$VERBOSE" = true ]; then
         log_info "Verbose mode enabled. Add 'BB_VERBOSE_LOGS=yes' for more detailed build logs."
     fi
-    log_info "Build process finished. Artifacts will be available in: ${BUILD_DIR}/tmp/deploy/images/${MACHINE:-$DEFAULT_MACHINE}"
+    log_info "Build process finished. Artifacts will be available in: ${BUILD_DIR}/tmp-glibc/deploy/images/${MACHINE}"
 }
 
 # Create convenience output directory
@@ -305,18 +305,153 @@ create_output_directory() {
     log_info "Creating output directory with build artifacts..."
 
     # Create output directory and copy deploy images
-    local deploy_dir="${BUILD_DIR}/tmp/deploy/images"
+    local deploy_dir="${BUILD_DIR}/tmp-glibc/deploy/images/${MACHINE}"
     local output_dir="${PROJECT_ROOT}/output"
 
+    log_info "Checking deploy directory: ${deploy_dir}"
+
     if [ -d "$deploy_dir" ]; then
+        # Clean and recreate output directory for fresh copy
+        if [ -d "$output_dir" ]; then
+            log_info "Cleaning existing output directory"
+            rm -rf "$output_dir"
+        fi
+        
         mkdir -p "$output_dir"
-        log_info "Copying build artifacts to output directory..."
-        cp -r "$deploy_dir"/* "$output_dir/" 2>/dev/null || true
+        log_info "Copying build artifacts from: ${deploy_dir}"
+
+        # Copy kernel image
+        if [ -f "${deploy_dir}/Image" ]; then
+            cp "${deploy_dir}/Image" "${output_dir}/kernel"
+            log_info "Copied kernel image: Image -> kernel"
+        fi
+
+        # Copy root filesystem (ext4) - find the correct image file
+        local rootfs_ext4
+        if [ -f "${deploy_dir}/robotics-controller-image-${MACHINE}.ext4" ]; then
+            rootfs_ext4="${deploy_dir}/robotics-controller-image-${MACHINE}.ext4"
+        elif [ -f "${deploy_dir}/robotics-qemu-image-${MACHINE}.ext4" ]; then
+            rootfs_ext4="${deploy_dir}/robotics-qemu-image-${MACHINE}.ext4"
+        else
+            rootfs_ext4=$(find "${deploy_dir}" -name "*.rootfs.ext4" | head -1)
+        fi
+        
+        if [ -n "$rootfs_ext4" ] && [ -f "$rootfs_ext4" ]; then
+            cp "$rootfs_ext4" "${output_dir}/rootfs.ext4"
+            # Also create properly named symlink for easy access
+            local image_name=$(basename "$rootfs_ext4")
+            ln -sf "rootfs.ext4" "${output_dir}/${image_name}"
+            log_info "Copied root filesystem: $(basename "$rootfs_ext4") -> rootfs.ext4"
+        fi
+
+        # Copy root filesystem archive
+        local rootfs_tar
+        if [ -f "${deploy_dir}/robotics-controller-image-${MACHINE}.tar.bz2" ]; then
+            rootfs_tar="${deploy_dir}/robotics-controller-image-${MACHINE}.tar.bz2"
+        elif [ -f "${deploy_dir}/robotics-qemu-image-${MACHINE}.tar.bz2" ]; then
+            rootfs_tar="${deploy_dir}/robotics-qemu-image-${MACHINE}.tar.bz2"
+        else
+            rootfs_tar=$(find "${deploy_dir}" -name "*.rootfs.tar.bz2" | head -1)
+        fi
+        
+        if [ -n "$rootfs_tar" ] && [ -f "$rootfs_tar" ]; then
+            cp "$rootfs_tar" "${output_dir}/rootfs.tar.bz2"
+            log_info "Copied root filesystem archive: $(basename "$rootfs_tar") -> rootfs.tar.bz2"
+        fi
+
+        # Copy QEMU config
+        local qemu_conf=$(find "${deploy_dir}" -name "*.qemuboot.conf" | head -1)
+        if [ -n "$qemu_conf" ]; then
+            cp "$qemu_conf" "${output_dir}/qemuboot.conf"
+            log_info "Copied QEMU config: $(basename "$qemu_conf") -> qemuboot.conf"
+        fi
+
+        # Create machine-specific output directory with latest build only
+        mkdir -p "${output_dir}/${MACHINE}"
+        
+        # Copy only the latest build files (no accumulation)
+        for file in "${deploy_dir}"/*; do
+            if [ -f "$file" ]; then
+                cp "$file" "${output_dir}/${MACHINE}/"
+            fi
+        done
+
+        # Create helpful scripts in output directory
+        create_output_scripts "$output_dir"
+
         log_success "Build artifacts copied to: ${output_dir}"
+        log_info "Machine-specific files also available in: ${output_dir}/${MACHINE}"
+        log_info "Use scripts/test-qemu-login.sh to test the QEMU image"
     else
-        log_warn "Deploy directory not found yet, skipping output directory creation"
+        log_warn "Deploy directory not found: ${deploy_dir}"
         log_info "After building, output images will be in: ${deploy_dir}"
     fi
+}
+
+# Create helpful scripts in output directory
+create_output_scripts() {
+    local output_dir="$1"
+    
+    # Create QEMU launch script
+    cat > "${output_dir}/launch-qemu.sh" << 'EOF'
+#!/bin/bash
+# Quick QEMU launch script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE_FILE="${SCRIPT_DIR}/rootfs.ext4"
+
+if [ ! -f "$IMAGE_FILE" ]; then
+    echo "Error: Image file not found: $IMAGE_FILE"
+    exit 1
+fi
+
+echo "Launching QEMU with image: $IMAGE_FILE"
+echo "Login: root/root or root/(empty password)"
+echo "Press Ctrl+A, then X to exit QEMU"
+echo ""
+
+# Try runqemu first, fallback to direct qemu command
+if command -v runqemu >/dev/null 2>&1; then
+    cd "$(dirname "$SCRIPT_DIR")/build"
+    runqemu qemu-robotics nographic
+else
+    qemu-system-aarch64 \
+        -machine virt \
+        -cpu cortex-a57 \
+        -m 1024 \
+        -nographic \
+        -kernel "${SCRIPT_DIR}/kernel" \
+        -drive file="${IMAGE_FILE}",format=raw,id=hd0 \
+        -netdev user,id=net0 \
+        -device virtio-net-device,netdev=net0 \
+        -append "root=/dev/vda rw console=ttyAMA0"
+fi
+EOF
+    chmod +x "${output_dir}/launch-qemu.sh"
+    
+    # Create build info file
+    cat > "${output_dir}/BUILD_INFO.txt" << EOF
+Build Information
+=================
+Build Date: $(date)
+Machine: ${MACHINE}
+Build Directory: ${BUILD_DIR}
+Deploy Directory: ${BUILD_DIR}/tmp-glibc/deploy/images/${MACHINE}
+
+Files:
+- kernel: Linux kernel image
+- rootfs.ext4: Root filesystem (ext4 format)
+- rootfs.tar.bz2: Root filesystem archive
+- qemuboot.conf: QEMU boot configuration
+- ${MACHINE}/: Complete machine-specific build artifacts
+
+Usage:
+- Launch QEMU: ./launch-qemu.sh
+- Test login: ../scripts/test-qemu-login.sh
+- Build logs: ${BUILD_DIR}/tmp-glibc/log/
+EOF
+
+    log_info "Created launch script: ${output_dir}/launch-qemu.sh"
+    log_info "Created build info: ${output_dir}/BUILD_INFO.txt"
 }
 
 # Show build summary
@@ -432,10 +567,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-
 # Ensure MACHINE is set to qemu-robotics before any template selection if --qemu is used
 if [ "$USE_QEMU" = true ]; then
     MACHINE="qemu-robotics"
+fi
+
+# Set default MACHINE if not specified
+if [ -z "$MACHINE" ]; then
+    MACHINE="$DEFAULT_MACHINE"
 fi
 
 # Run main function

@@ -7,6 +7,11 @@ require robotics-controller-image.bb
 
 IMAGE_BASENAME = "robotics-qemu-image"
 
+inherit extrausers
+
+# Simple: Allow root login with empty password for QEMU testing
+EXTRA_USERS_PARAMS = "usermod -p '' root;"
+
 # Add QEMU-specific packages for testing
 IMAGE_INSTALL:append = " \
     packagegroup-core-ssh-openssh \
@@ -23,7 +28,8 @@ IMAGE_FEATURES:append = " \
     tools-debug \
     tools-profile \
     package-management \
-    debug-tweaks \
+    allow-root-login \
+    empty-root-password \
 "
 
 IMAGE_ROOTFS_EXTRA_SPACE = "131072"
@@ -43,8 +49,13 @@ echo "Robotics Controller Web Interface Testing"
 echo "- Web files: $ROBOTICS_CONTROLLER_WEB"
 echo "- Configuration: $ROBOTICS_CONTROLLER_CONFIG"
 echo "- Test web interface: python3 -m http.server 8080 -d $ROBOTICS_CONTROLLER_WEB"
+echo ""
+echo "Login Information:"
+echo "- Username: root"
+echo "- Password: (just press Enter - no password needed)"
 EOF
     chmod 755 ${IMAGE_ROOTFS}/etc/profile.d/qemu-env.sh
+
 
     echo "qemu-development" > ${IMAGE_ROOTFS}/etc/robotics-platform
 
@@ -82,6 +93,10 @@ echo "Web Interface: $ROBOTICS_CONTROLLER_WEB"
 echo "Configuration: $ROBOTICS_CONTROLLER_CONFIG"
 echo "QEMU Config: /etc/robotics-controller/qemu.conf"
 echo ""
+echo "Login Information:"
+echo "  Username: root"
+echo "  Password: (just press Enter - no password needed)"
+echo ""
 echo "Service Commands:"
 echo "  systemctl start robotics-controller"
 echo "  systemctl status robotics-controller"
@@ -98,6 +113,10 @@ EOF
     cat > ${IMAGE_ROOTFS}/opt/robotics-qemu/README.txt << 'EOF'
 QEMU Robotics Development Environment
 ====================================
+Login Information:
+- Username: root
+- Password: (just press Enter - no password needed)
+
 Main Application:
 - Binary: /usr/bin/robotics-controller
 - Web Interface: /usr/share/robotics-controller/www/
@@ -122,6 +141,12 @@ Testing:
 2. Check status: systemctl status robotics-controller
 3. View logs: journalctl -u robotics-controller -f
 4. Access web: http://localhost:8080 (if port forwarded)
+
+Troubleshooting Login Issues:
+- Try username 'root' and just press Enter (no password)
+- If that fails, check console output for errors
+- Check if SSH is running: systemctl status ssh
+- For serial console: Use QEMU monitor console
 
 Environment Variables:
 - QEMU_ENV=1

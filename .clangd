@@ -38,7 +38,7 @@ Index:
         - "**/bitbake-cookerdaemon.log"
         # Generated and template files (except in config for version.hpp)
         - "**/*.in"
-        - "!**/config/*.in"  # Keep config templates like version.hpp.in
+        - "!**/config/*.in" # Keep config templates like version.hpp.in
         # Log and temporary files
         - "**/*.log"
         - "**/*.tmp"
