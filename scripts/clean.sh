@@ -23,6 +23,10 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
 log_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
@@ -60,22 +64,30 @@ clean_build_outputs() {
         # Clean Yocto build directories (check for both tmp and tmp-glibc)
         if [ -d "$BUILD_DIR/tmp-glibc" ]; then
             log_info "Removing $BUILD_DIR/tmp-glibc"
-            rm -rf "$BUILD_DIR/tmp-glibc"
+            if ! safe_remove_directory "$BUILD_DIR/tmp-glibc"; then
+                log_warn "Failed to remove $BUILD_DIR/tmp-glibc completely"
+            fi
         elif [ -d "$BUILD_DIR/tmp" ]; then
             log_info "Removing $BUILD_DIR/tmp"
-            rm -rf "$BUILD_DIR/tmp"
+            if ! safe_remove_directory "$BUILD_DIR/tmp"; then
+                log_warn "Failed to remove $BUILD_DIR/tmp completely"
+            fi
         fi
 
         # Clean other build artifacts
         if [ -d "$BUILD_DIR/cache" ]; then
             log_info "Removing $BUILD_DIR/cache"
-            rm -rf "$BUILD_DIR/cache"
+            if ! safe_remove_directory "$BUILD_DIR/cache"; then
+                log_warn "Failed to remove $BUILD_DIR/cache completely"
+            fi
         fi
         
         # Clean sstate cache if present
         if [ -d "$BUILD_DIR/sstate-cache" ]; then
             log_info "Removing $BUILD_DIR/sstate-cache"
-            rm -rf "$BUILD_DIR/sstate-cache"
+            if ! safe_remove_directory "$BUILD_DIR/sstate-cache"; then
+                log_warn "Failed to remove $BUILD_DIR/sstate-cache completely"
+            fi
         fi
     fi
 
@@ -317,6 +329,96 @@ confirm_action() {
             exit 0
             ;;
     esac
+}
+
+# Function to safely remove directories with better error handling
+safe_remove_directory() {
+    local dir="$1"
+    local max_attempts=3
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        if [ ! -d "$dir" ]; then
+            return 0  # Directory doesn't exist, success
+        fi
+        
+        log_info "Attempt $attempt/$max_attempts to remove directory: $(basename "$dir")"
+        
+        # Check for processes using files in the directory
+        if command -v lsof >/dev/null 2>&1; then
+            local open_files
+            open_files=$(lsof +D "$dir" 2>/dev/null | wc -l)
+            if [ "$open_files" -gt 0 ]; then
+                log_warn "Found $open_files open files in directory, attempting cleanup..."
+                # Try to kill processes using the directory (be cautious)
+                lsof +D "$dir" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u | while read -r pid; do
+                    if [ -n "$pid" ] && [ "$pid" != "$$" ]; then
+                        log_info "Terminating process $pid using directory files"
+                        kill -TERM "$pid" 2>/dev/null || true
+                    fi
+                done
+                sleep 2
+            fi
+        fi
+        
+        # Try to remove with different approaches
+        if rm -rf "$dir" 2>/dev/null; then
+            log_success "Successfully removed directory: $(basename "$dir")"
+            return 0
+        fi
+        
+        # If rm -rf failed, try alternative approaches
+        log_warn "Standard removal failed, trying alternative methods..."
+        
+        # Try to remove files first, then directories
+        if [ -d "$dir" ]; then
+            find "$dir" -type f -delete 2>/dev/null || true
+            find "$dir" -depth -type d -exec rmdir {} \; 2>/dev/null || true
+        fi
+        
+        # Check if directory is now empty and try again
+        if [ -d "$dir" ]; then
+            if [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
+                rmdir "$dir" 2>/dev/null && return 0
+            fi
+        fi
+        
+        # If still exists, try with sudo (if available and user confirms)
+        if [ -d "$dir" ] && [ $attempt -eq $max_attempts ]; then
+            if command -v sudo >/dev/null 2>&1; then
+                log_warn "Regular removal failed. Directory may contain files owned by root."
+                echo -e "${YELLOW}Try removing with sudo? [y/N]${NC}"
+                read -r response
+                case "$response" in
+                    [yY][eE][sS]|[yY])
+                        if sudo rm -rf "$dir" 2>/dev/null; then
+                            log_success "Successfully removed directory with sudo: $(basename "$dir")"
+                            return 0
+                        fi
+                        ;;
+                esac
+            fi
+        fi
+        
+        attempt=$((attempt + 1))
+        if [ $attempt -le $max_attempts ]; then
+            log_info "Retrying in 2 seconds..."
+            sleep 2
+        fi
+    done
+    
+    # Final check - if directory still exists, report what's left
+    if [ -d "$dir" ]; then
+        log_error "Failed to completely remove directory: $(basename "$dir")"
+        log_info "Remaining contents:"
+        ls -la "$dir" 2>/dev/null | head -10 || true
+        if [ "$(ls -A "$dir" 2>/dev/null | wc -l)" -gt 10 ]; then
+            log_info "... and more files"
+        fi
+        return 1
+    fi
+    
+    return 0
 }
 
 main() {

@@ -7,10 +7,7 @@ require robotics-controller-image.bb
 
 IMAGE_BASENAME = "robotics-qemu-image"
 
-inherit extrausers
 
-# Simple: Allow root login with empty password for QEMU testing
-EXTRA_USERS_PARAMS = "usermod -p '' root;"
 
 # Add QEMU-specific packages for testing
 IMAGE_INSTALL:append = " \
@@ -30,7 +27,11 @@ IMAGE_FEATURES:append = " \
     package-management \
     allow-root-login \
     empty-root-password \
+    debug-tweaks \
 "
+
+# Explicitly set root password to empty (no password)
+EXTRA_USERS_PARAMS = "usermod -P '' root;"
 
 IMAGE_ROOTFS_EXTRA_SPACE = "131072"
 
@@ -52,7 +53,7 @@ echo "- Test web interface: python3 -m http.server 8080 -d $ROBOTICS_CONTROLLER_
 echo ""
 echo "Login Information:"
 echo "- Username: root"
-echo "- Password: (just press Enter - no password needed)"
+echo "- Password: (just press Enter)"
 EOF
     chmod 755 ${IMAGE_ROOTFS}/etc/profile.d/qemu-env.sh
 
@@ -95,7 +96,7 @@ echo "QEMU Config: /etc/robotics-controller/qemu.conf"
 echo ""
 echo "Login Information:"
 echo "  Username: root"
-echo "  Password: (just press Enter - no password needed)"
+echo "  Password: (just press Enter)"
 echo ""
 echo "Service Commands:"
 echo "  systemctl start robotics-controller"
@@ -115,7 +116,7 @@ QEMU Robotics Development Environment
 ====================================
 Login Information:
 - Username: root
-- Password: (just press Enter - no password needed)
+- Password: (just press Enter)
 
 Main Application:
 - Binary: /usr/bin/robotics-controller

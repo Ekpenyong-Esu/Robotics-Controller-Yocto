@@ -162,16 +162,10 @@ run_qemu() {
     # Check Yocto environment
     check_yocto
 
-    # Check if build is completed - look in both possible build directories
-    local deploy_dir=""
-    if [ -d "${BUILD_DIR}/build/tmp-glibc/deploy/images" ]; then
-        deploy_dir="${BUILD_DIR}/build/tmp-glibc/deploy/images"
-    elif [ -d "${BUILD_DIR}/tmp-glibc/deploy/images" ]; then
-        deploy_dir="${BUILD_DIR}/tmp-glibc/deploy/images"
-    elif [ -d "${BUILD_DIR}/tmp/deploy/images" ]; then
-        deploy_dir="${BUILD_DIR}/tmp/deploy/images"
-    else
-        log_error "No images found in the build directory"
+    # Check if build is completed - use the correct deploy directory
+    local deploy_dir="${BUILD_DIR}/tmp-glibc/deploy/images"
+    if [ ! -d "$deploy_dir" ]; then
+        log_error "No images found in the build directory: $deploy_dir"
         log_info "Build your Yocto image first with:"
         log_info "  ./scripts/build.sh --qemu"
         exit 1
@@ -192,12 +186,7 @@ run_qemu() {
     log_info "Setting up QEMU environment..."
 
     # Change to the correct build directory
-    local build_subdir="${BUILD_DIR}"
-    if [ -d "${BUILD_DIR}/build" ]; then
-        build_subdir="${BUILD_DIR}/build"
-    fi
-
-    cd "$build_subdir"
+    cd "$BUILD_DIR"
 
     # Build QEMU command options
     local qemu_args=()
