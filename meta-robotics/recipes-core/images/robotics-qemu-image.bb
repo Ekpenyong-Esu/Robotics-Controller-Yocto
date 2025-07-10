@@ -7,7 +7,7 @@ require robotics-controller-image.bb
 
 IMAGE_BASENAME = "robotics-qemu-image"
 
-
+EXTRA_IMAGE_FEATURES += "debug-tweaks"
 
 # Add QEMU-specific packages for testing
 IMAGE_INSTALL:append = " \

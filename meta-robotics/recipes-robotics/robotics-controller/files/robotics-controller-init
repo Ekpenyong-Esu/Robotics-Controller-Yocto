@@ -15,7 +15,7 @@
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 DESC="Robotics Controller Application"
 NAME=robotics-controller
-DAEMON=/opt/robotics-controller/bin/$NAME
+DAEMON=/usr/bin/$NAME
 DAEMON_ARGS="--config /etc/robotics-controller/robotics-controller.conf"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME

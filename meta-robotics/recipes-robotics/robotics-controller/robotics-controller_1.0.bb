@@ -65,10 +65,10 @@ do_install() {
 
     # Install configuration files
     install -d ${D}${sysconfdir}/robotics-controller
-    install -m 0644 ${S}/config/robotics-controller.conf ${D}${sysconfdir}/robotics-controller/
+    install -m 0644 ${WORKDIR}/robotics-controller.conf ${D}${sysconfdir}/robotics-controller/
 
     # Install init script
-    install -m 0755 ${S}/scripts/robotics-controller-init ${D}${sysconfdir}/robotics-controller/
+    install -m 0755 ${WORKDIR}/robotics-controller-init ${D}${sysconfdir}/robotics-controller/
 
     # Install web interface files
     install -d ${D}${datadir}/${PN}/www
