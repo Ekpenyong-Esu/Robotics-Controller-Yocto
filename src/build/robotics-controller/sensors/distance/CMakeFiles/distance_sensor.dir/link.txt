@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdistance_sensor.a CMakeFiles/distance_sensor.dir/distance_sensor.cpp.o
+/usr/bin/ranlib libdistance_sensor.a

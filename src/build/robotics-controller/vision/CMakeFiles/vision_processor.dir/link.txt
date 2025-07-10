@@ -1,0 +1,2 @@
+/usr/bin/ar qc libvision_processor.a CMakeFiles/vision_processor.dir/vision_processor.cpp.o
+/usr/bin/ranlib libvision_processor.a

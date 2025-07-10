@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcommunication_hub.a CMakeFiles/communication_hub.dir/communication_hub.cpp.o
+/usr/bin/ranlib libcommunication_hub.a
