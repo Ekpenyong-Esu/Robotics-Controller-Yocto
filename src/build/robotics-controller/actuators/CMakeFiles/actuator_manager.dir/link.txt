@@ -1,2 +1,0 @@
-/usr/bin/ar qc libactuator_manager.a CMakeFiles/actuator_manager.dir/actuator_manager.cpp.o
-/usr/bin/ranlib libactuator_manager.a

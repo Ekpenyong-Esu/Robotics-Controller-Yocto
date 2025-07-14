@@ -1,59 +1,23 @@
+
+# Robotics Controller Production Image
+# Minimal production image for robotics controller hardware
+
 SUMMARY = "Robotics Controller Production Image"
-DESCRIPTION = "Production image for robotics controller with C++ backend and web interface. \
-Optimized for embedded robotics applications with hardware control capabilities."
+DESCRIPTION = "Production image for robotics controller."
 LICENSE = "MIT"
 
+# Inherit Yocto core image class
 inherit core-image
 
-# =================================================================
-# CORE PACKAGES
-# =================================================================
-IMAGE_INSTALL = " \
-    packagegroup-core-boot \
-    systemd \
-    python3-core \
-    python3-json \
-    robotics-controller \
-    libgpiod-tools \
-    util-linux \
-    iproute2 \
-"
+# Essential packages for robotics controller
+IMAGE_INSTALL = "packagegroup-core-boot systemd python3-core python3-json robotics-controller libgpiod-tools util-linux iproute2 i2c-tools kernel-modules"
 
-# =================================================================
-# HARDWARE CONTROL PACKAGES
-# =================================================================
-IMAGE_INSTALL:append = " \
-    i2c-tools \
-    kernel-modules \
-"
+# Enable SSH and package management for remote access and updates
+IMAGE_FEATURES += "ssh-server-openssh package-management"
 
-# =================================================================
-# DEVELOPMENT TOOLS (Optional - uncomment for debugging)
-# =================================================================
-# IMAGE_INSTALL:append = " \
-#     packagegroup-core-ssh-openssh \
-#     bash \
-#     openssh \
-#     nano \
-#     vim \
-#     strace \
-#     gdb \
-# "
-
-# =================================================================
-# SYSTEM CONFIGURATION
-# =================================================================
-# systemd configuration is handled in machine conf files
-# (machine configurations handle init system selection)
-
-# Image features for production (secure by default)
-IMAGE_FEATURES += " ssh-server-openssh package-management "
-
-# Production deployment - no empty passwords or root login
+# NOTE: For production, root login and empty passwords are disabled by default
 # For development, use robotics-dev-image.bb instead
 
-# Add space for applications (512MB)
-IMAGE_ROOTFS_EXTRA_SPACE = "524288"
 
-# Set filesystem types
+# Output filesystem types
 IMAGE_FSTYPES = "ext4 tar.bz2"

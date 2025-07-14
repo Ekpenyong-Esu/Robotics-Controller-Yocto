@@ -126,11 +126,13 @@ Device Tree ──▶ Drivers ──▶ Hardware ──▶ Application APIs
 **Purpose**: Defines the build environment, target hardware, and layer relationships
 
 **Key Components**:
+
 - **`layer.conf`**: Declares layer metadata, dependencies, and compatibility
 - **Machine configs**: Hardware-specific optimizations (CPU, memory, peripherals)
 - **Templates**: Pre-configured build environments for different use cases
 
 **How it links**: Used by BitBake at the start of every build to understand:
+
 - What hardware we're targeting
 - Which other layers are needed
 - What build optimizations to apply
@@ -141,22 +143,26 @@ Device Tree ──▶ Drivers ──▶ Hardware ──▶ Application APIs
 
 **Key Components**:
 
-#### **Real-Time Extensions** (`rt-preemption.cfg`):
+#### **Real-Time Extensions** (`rt-preemption.cfg`)
+
 ```bash
 CONFIG_PREEMPT_RT=y          # Enable real-time preemption
 CONFIG_HIGH_RES_TIMERS=y     # Microsecond-precision timing
 CONFIG_NO_HZ_FULL=y          # Tickless operation for RT cores
 ```
 
-#### **Hardware Interface Drivers**:
+#### **Hardware Interface Drivers**
+
 - **GPIO** (`gpio.cfg`): Digital I/O for sensors and actuators
 - **I2C** (`i2c.cfg`): Communication bus for sensors (IMU, ToF)
 - **SPI** (`spi.cfg`): High-speed bus for precision sensors
 - **PWM** (`pwm.cfg`): Motor control and servo positioning
 - **V4L2** (`v4l2.cfg`): Camera interfaces for computer vision
 
-#### **Device Tree Patches**:
+#### **Device Tree Patches**
+
 The BeagleBone device tree patch (`0001-Add-BeagleBone-Black-robotics-dts.patch`) configures:
+
 ```dts
 /* Enable I2C1 for sensors */
 &i2c1 {
@@ -179,6 +185,7 @@ The BeagleBone device tree patch (`0001-Add-BeagleBone-Black-robotics-dts.patch`
 **Purpose**: Combines all components into bootable system images for different use cases
 
 **Image Hierarchy**:
+
 ```text
 core-image (base) ──┬── robotics-image.bb (minimal)
                     ├── robotics-controller-image.bb (production)
@@ -188,6 +195,7 @@ core-image (base) ──┬── robotics-image.bb (minimal)
 
 **Package Integration**:
 Each image includes specific packages:
+
 - **Base**: `robotics-controller`, `opencv`, `python3`
 - **Production**: + USB tools, connectivity, debugging
 - **Development**: + GCC toolchain, kernel sources, profiling tools
@@ -201,13 +209,15 @@ Each image includes specific packages:
 
 **Components**:
 
-#### **Main Application** (`robotics-controller_1.0.bb`):
+#### **Main Application** (`robotics-controller_1.0.bb`)
+
 - Builds C++ robotics control software
 - Integrates with OpenCV for computer vision
 - Provides web interface for remote control
 - Handles sensor fusion and motor control
 
-#### **Service Integration** (`robotics-controller.service`):
+#### **Service Integration** (`robotics-controller.service`)
+
 ```ini
 [Unit]
 Description=Robotics Controller Service
@@ -223,7 +233,8 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-#### **Configuration Management**:
+#### **Configuration Management**
+
 - **`robotics-controller-init`**: Startup script with hardware detection
 - **`robotics-controller.conf`**: Runtime parameters (PID gains, sensor calibration)
 
@@ -232,6 +243,7 @@ WantedBy=multi-user.target
 ## 🔄 Build Process Flow
 
 ### **1. Configuration Phase**
+
 ```bash
 # BitBake reads layer.conf to understand dependencies
 DEPENDS = "meta-openembedded meta-oe meta-python"
@@ -242,6 +254,7 @@ DISTRO_FEATURES += "systemd opencv"
 ```
 
 ### **2. Kernel Build Phase**
+
 ```bash
 # Kernel recipe applies our configurations
 linux-yocto-rt_%.bbappend
@@ -252,6 +265,7 @@ linux-yocto-rt_%.bbappend
 ```
 
 ### **3. Application Build Phase**
+
 ```bash
 # Application recipe builds from source
 robotics-controller_1.0.bb
@@ -262,6 +276,7 @@ robotics-controller_1.0.bb
 ```
 
 ### **4. Image Assembly Phase**
+
 ```bash
 # Image recipe combines everything
 robotics-controller-image.bb
@@ -291,28 +306,32 @@ Physical Hardware    ──▶  Device Tree   ──▶  Kernel Driver  ──�
 For a Time-of-Flight sensor on I2C:
 
 1. **Device Tree** defines hardware connection:
-   ```dts
-   vl53l0x@29 {
-       compatible = "st,vl53l0x";
-       reg = <0x29>;
-   };
-   ```
+
+    ```dts
+    vl53l0x@29 {
+        compatible = "st,vl53l0x";
+        reg = <0x29>;
+    };
+    ```
 
 2. **Kernel Config** enables I2C driver:
-   ```bash
-   CONFIG_I2C_OMAP=y
-   CONFIG_VL53L0X=m
-   ```
+
+    ```bash
+    CONFIG_I2C_OMAP=y
+    CONFIG_VL53L0X=m
+    ```
 
 3. **Application** accesses via Linux API:
-   ```cpp
-   int fd = open("/dev/i2c-1", O_RDWR);
-   ioctl(fd, I2C_SLAVE, 0x29);
-   ```
+
+    ```cpp
+    int fd = open("/dev/i2c-1", O_RDWR);
+    ioctl(fd, I2C_SLAVE, 0x29);
+    ```
 
 ## 🚀 Usage Workflows
 
 ### **Development Workflow**
+
 ```bash
 # 1. Setup build environment
 source oe-init-build-env
@@ -329,6 +348,7 @@ dd if=robotics-dev-image.wic of=/dev/sdX
 ```
 
 ### **Production Deployment**
+
 ```bash
 # 1. Configure for production
 MACHINE="beaglebone-robotics" bitbake robotics-controller-image
@@ -338,9 +358,10 @@ dd if=robotics-controller-image.wic of=/dev/mmcblk1
 ```
 
 ### **Customization Workflow**
+
 ```bash
 # 1. Modify application
-edit recipes-robotics/robotics-controller/files/src/main.cpp
+edit recipes-robotics/robotics-controller/files/robotics/main.cpp
 
 # 2. Add kernel features
 echo "CONFIG_NEW_SENSOR=y" >> recipes-kernel/linux/linux-yocto-rt/sensors.cfg
@@ -352,17 +373,20 @@ bitbake robotics-controller-image
 ## 🔧 Configuration Options
 
 ### **Machine Selection**
+
 - **`beaglebone-robotics`**: Production BeagleBone Black
 - **`rpi4-robotics`**: Development Raspberry Pi 4
 - **`qemu-robotics`**: Virtual testing environment
 
 ### **Image Variants**
+
 - **`robotics-image`**: Minimal robotics base (200MB)
 - **`robotics-controller-image`**: Full production system (400MB)
 - **`robotics-dev-image`**: Development with toolchain (600MB)
 - **`robotics-qemu-image`**: Lightweight testing (150MB)
 
 ### **Feature Toggles**
+
 ```bash
 # In local.conf
 DISTRO_FEATURES += "systemd opencv python"  # Enable features
@@ -375,22 +399,25 @@ IMAGE_FEATURES += "debug-tweaks tools-sdk"  # Development tools
 ### **Common Build Issues**
 
 1. **Missing Dependencies**:
-   ```bash
-   ERROR: Nothing PROVIDES 'opencv'
-   # Solution: Add meta-openembedded layers
-   ```
+
+    ```bash
+    ERROR: Nothing PROVIDES 'opencv'
+    # Solution: Add meta-openembedded layers
+    ```
 
 2. **Kernel Config Conflicts**:
-   ```bash
-   WARNING: CONFIG_RT_PREEMPT not set
-   # Solution: Check rt-preemption.cfg inclusion
-   ```
+
+    ```bash
+    WARNING: CONFIG_RT_PREEMPT not set
+    # Solution: Check rt-preemption.cfg inclusion
+    ```
 
 3. **Device Tree Errors**:
-   ```bash
-   ERROR: DTC: /tmp/am335x-boneblack-robotics.dts:45.1-7 syntax error
-   # Solution: Validate device tree syntax
-   ```
+
+    ```bash
+    ERROR: DTC: /tmp/am335x-boneblack-robotics.dts:45.1-7 syntax error
+    # Solution: Validate device tree syntax
+    ```
 
 ### **Debugging Tools**
 
@@ -445,15 +472,15 @@ dd if=tmp/deploy/images/beaglebone-robotics/robotics-controller-image.wic of=/de
 1. Clone this repository
 2. Add the layer to your `bblayers.conf`:
 
-   ```bash
-   BBLAYERS += "/path/to/meta-robotics"
-   ```
+    ```bash
+    BBLAYERS += "/path/to/meta-robotics"
+    ```
 
 3. Set your machine in `local.conf`:
 
-   ```bash
-   MACHINE ?= "beaglebone-robotics"
-   ```
+    ```bash
+    MACHINE ?= "beaglebone-robotics"
+    ```
 
 ### Building an Image
 
@@ -467,12 +494,12 @@ bitbake robotics-image
 
 ## Key Components
 
-| Component | Description |
-|-----------|-------------|
-| Real-time Kernel | Linux with PREEMPT_RT for low-latency control |
-| Device Drivers | I2C, SPI, GPIO, PWM, and V4L2 for hardware access |
-| OpenCV | Computer vision libraries for image processing |
-| Custom DTB | Custom device tree for robotics hardware |
+| Component           | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| Real-time Kernel    | Linux with PREEMPT_RT for low-latency control       |
+| Device Drivers      | I2C, SPI, GPIO, PWM, and V4L2 for hardware access   |
+| OpenCV              | Computer vision libraries for image processing      |
+| Custom DTB          | Custom device tree for robotics hardware            |
 | Robotics Controller | Main application controlling all robotics functions |
 
 ## For Beginners

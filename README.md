@@ -8,66 +8,66 @@ This project demonstrates how to create an efficient robotics controller using Y
 
 ### Why Yocto Project?
 
-- **Flexibility**: Highly customizable Linux distributions for specific needs
-- **Reproducibility**: Consistent builds with BitBake and metadata layers
-- **Scalability**: Easily add software components via layered architecture
-- **Standardization**: Industry-standard build system for embedded Linux
-- **Real-time Performance**: Support for real-time kernels and patches
+-   **Flexibility**: Highly customizable Linux distributions for specific needs
+-   **Reproducibility**: Consistent builds with BitBake and metadata layers
+-   **Scalability**: Easily add software components via layered architecture
+-   **Standardization**: Industry-standard build system for embedded Linux
+-   **Real-time Performance**: Support for real-time kernels and patches
 
 ## Hardware Requirements
 
 ### Primary Board
 
-- **BeagleBone Black** (preferred for PRUs and analog inputs) or Raspberry Pi 4
+-   **BeagleBone Black** (preferred for PRUs and analog inputs) or Raspberry Pi 4
 
 ### Peripherals and I/O Interfaces
 
-| Interface | Component | Purpose |
-|-----------|-----------|---------|
-| **GPIO** | LEDs, Push buttons, IR sensors | Status indication, mode selection, line following |
-| **I2C** | VL53L0X time-of-flight sensor | Obstacle avoidance |
-| **SPI** | MPU-9250 IMU | Orientation and motion tracking |
-| **PWM** | DC motors + L298N driver | Robot movement control |
-| **UART** | NEO-6M GPS module | Outdoor navigation |
-| **Analog** | QTR-8A line sensors (BBB only) | Line following |
-| **USB** | Webcam | Computer vision with OpenCV |
+| Interface  | Component                      | Purpose                                           |
+| ---------- | ------------------------------ | ------------------------------------------------- |
+| **GPIO**   | LEDs, Push buttons, IR sensors | Status indication, mode selection, line following |
+| **I2C**    | VL53L0X time-of-flight sensor  | Obstacle avoidance                                |
+| **SPI**    | MPU-9250 IMU                   | Orientation and motion tracking                   |
+| **PWM**    | DC motors + L298N driver       | Robot movement control                            |
+| **UART**   | NEO-6M GPS module              | Outdoor navigation                                |
+| **Analog** | QTR-8A line sensors (BBB only) | Line following                                    |
+| **USB**    | Webcam                         | Computer vision with OpenCV                       |
 
 ### Storage
 
-- **SD Card**: 8GB or larger for Yocto Project image
+-   **SD Card**: 8GB or larger for Yocto Project image
 
 ## Software Requirements
 
 ### Host System
 
-- Ubuntu 20.04+ with at least 50GB free disk space
-- Internet connection for package downloads
+-   Ubuntu 20.04+ with at least 50GB free disk space
+-   Internet connection for package downloads
 
 ### Tools and Libraries
 
-- Yocto Project (Langdale or newer release)
-- BitBake build system
-- Git and Python 3
-- OpenCV for computer vision
-- meta-robotics layer (custom)
-- meta-openembedded for additional packages
+-   Yocto Project (Langdale or newer release)
+-   BitBake build system
+-   Git and Python 3
+-   OpenCV for computer vision
+-   meta-robotics layer (custom)
+-   meta-openembedded for additional packages
 
 ## Project Features
 
 ### 🎯 Core Functionality
 
-- **Custom Linux Image**: Tailored system with essential drivers
-- **Multi-Interface I/O**: Comprehensive utilization of all board interfaces
-- **Real-time Control**: Low-latency motor and sensor control
-- **Computer Vision**: OpenCV-based obstacle detection
-- **Remote Monitoring**: Web interface for control and status
+-   **Custom Linux Image**: Tailored system with essential drivers
+-   **Multi-Interface I/O**: Comprehensive utilization of all board interfaces
+-   **Real-time Control**: Low-latency motor and sensor control
+-   **Computer Vision**: OpenCV-based obstacle detection
+-   **Remote Monitoring**: Web interface for control and status
 
 ### 🚀 Advanced Features
 
-- **PRU Integration**: Real-time units for precise motor control (BeagleBone Black)
-- **GPS Navigation**: Outdoor positioning and waypoint navigation
-- **IMU Fusion**: Orientation tracking and stability control
-- **Adaptive Algorithms**: Dynamic behavior based on sensor inputs
+-   **PRU Integration**: Real-time units for precise motor control (BeagleBone Black)
+-   **GPS Navigation**: Outdoor positioning and waypoint navigation
+-   **IMU Fusion**: Orientation tracking and stability control
+-   **Adaptive Algorithms**: Dynamic behavior based on sensor inputs
 
 ## Quick Start
 
@@ -133,7 +133,7 @@ Robotics-Controller-Yocto/
 ├── README.md                    # This file
 ├── meta-robotics/               # Custom Yocto layer
 │   ├── conf/                    # Layer configuration
-│   │   ├── layer.conf          # Layer definition  
+│   │   ├── layer.conf          # Layer definition
 │   │   └── machine/            # Machine configurations
 │   │       ├── beaglebone-robotics.conf
 │   │       ├── rpi4-robotics.conf
@@ -160,7 +160,7 @@ Robotics-Controller-Yocto/
 │   │   ├── local.conf          # Local build settings
 │   │   └── bblayers.conf       # Layer configuration
 │   └── tmp/                    # Build artifacts
-├── src/                        # Source code
+├── robotics/                   # Source code
 │   ├── robotics-controller/    # Main C++ application
 │   ├── drivers/                # Custom drivers
 │   └── web-interface/          # Web control interface
@@ -207,9 +207,9 @@ bitbake robotics-controller-image -c populate_sdk
 
 #### Power and Basic Setup
 
-- Connect 5V power supply
-- Insert SD card with flashed image
-- Connect FTDI cable to UART0 for console access
+-   Connect 5V power supply
+-   Insert SD card with flashed image
+-   Connect FTDI cable to UART0 for console access
 
 #### Sensor Connections
 
@@ -267,9 +267,9 @@ P9.38 → Sensor 4 (AIN3)
 
 ### 2. Power Requirements
 
-- Main board: 5V 2A power supply
-- Motors: Separate 12V supply recommended
-- Sensors: Powered from 3.3V board supply
+-   Main board: 5V 2A power supply
+-   Motors: Separate 12V supply recommended
+-   Sensors: Powered from 3.3V board supply
 
 ## Software Architecture
 
@@ -284,10 +284,10 @@ P9.38 → Sensor 4 (AIN3)
 
 ### Real-time Considerations
 
-- **PRU Integration**: Critical timing handled by Programmable Real-time Units
-- **Interrupt Handling**: Fast sensor response times
-- **Memory Management**: Minimal allocation in control loops
-- **Priority Scheduling**: Real-time task prioritization
+-   **PRU Integration**: Critical timing handled by Programmable Real-time Units
+-   **Interrupt Handling**: Fast sensor response times
+-   **Memory Management**: Minimal allocation in control loops
+-   **Priority Scheduling**: Real-time task prioritization
 
 ## Build Configuration Details
 
@@ -352,18 +352,18 @@ cd tests/
 
 ### System Specifications
 
-- **Boot Time**: < 10 seconds
-- **Image Size**: < 100MB
-- **RAM Usage**: < 96MB at runtime
-- **Control Loop**: 100Hz update rate
-- **Sensor Latency**: < 5ms
+-   **Boot Time**: < 10 seconds
+-   **Image Size**: < 100MB
+-   **RAM Usage**: < 96MB at runtime
+-   **Control Loop**: 100Hz update rate
+-   **Sensor Latency**: < 5ms
 
 ### Real-time Performance
 
-- **Motor Response**: < 1ms
-- **Obstacle Detection**: < 10ms
-- **Vision Processing**: 30 FPS
-- **GPS Update**: 1Hz
+-   **Motor Response**: < 1ms
+-   **Obstacle Detection**: < 10ms
+-   **Vision Processing**: 30 FPS
+-   **GPS Update**: 1Hz
 
 ## Web Interface
 
@@ -371,11 +371,11 @@ Access the robot control interface at `http://robot-ip:8080`
 
 ### Features
 
-- Live sensor data display
-- Manual motor control
-- Camera stream viewer
-- Configuration settings
-- System status monitoring
+-   Live sensor data display
+-   Manual motor control
+-   Camera stream viewer
+-   Configuration settings
+-   System status monitoring
 
 ## Troubleshooting
 
@@ -392,15 +392,15 @@ bitbake robotics-controller-image -c cleansstate && bitbake robotics-controller-
 
 #### SD Card Boot Issues
 
-- Verify image was flashed correctly
-- Check SD card for corruption
-- Ensure proper power supply
+-   Verify image was flashed correctly
+-   Check SD card for corruption
+-   Ensure proper power supply
 
 #### Sensor Communication
 
-- Verify wiring connections
-- Check I2C/SPI device addresses
-- Test with command-line tools
+-   Verify wiring connections
+-   Check I2C/SPI device addresses
+-   Test with command-line tools
 
 ### Debug Commands
 
@@ -433,34 +433,34 @@ This project fully supports QEMU-based virtual testing, allowing development and
 
 #### QEMU Features
 
-- **Full System Emulation**: Tests the complete software stack
-- **Network Support**: Connect to host network with `--network` option
-- **Graphical Interface**: Enable GUI for visual testing with `--graphics`
-- **Debug Mode**: Enable debug output with `--debug`
-- **Performance Tuning**: Adjust memory allocation with `--memory 1G`
+-   **Full System Emulation**: Tests the complete software stack
+-   **Network Support**: Connect to host network with `--network` option
+-   **Graphical Interface**: Enable GUI for visual testing with `--graphics`
+-   **Debug Mode**: Enable debug output with `--debug`
+-   **Performance Tuning**: Adjust memory allocation with `--memory 1G`
 
 #### Limitations
 
-- No hardware-specific features (PRUs, actual GPIO)
-- Limited sensor simulation
+-   No hardware-specific features (PRUs, actual GPIO)
+-   Limited sensor simulation
 
 ### PRU Programming (BeagleBone Black)
 
-- Real-time motor control at microsecond precision
-- Hardware PWM generation
-- High-speed sensor sampling
+-   Real-time motor control at microsecond precision
+-   Hardware PWM generation
+-   High-speed sensor sampling
 
 ### Computer Vision Pipeline
 
-- Object detection and tracking
-- Color-based navigation
-- Edge detection for line following
+-   Object detection and tracking
+-   Color-based navigation
+-   Edge detection for line following
 
 ### Navigation Algorithms
 
-- PID motor control
-- Kalman filtering for sensor fusion
-- A* pathfinding for complex navigation
+-   PID motor control
+-   Kalman filtering for sensor fusion
+-   A\* pathfinding for complex navigation
 
 ## Contributing
 
@@ -476,17 +476,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Yocto Project community for the excellent embedded Linux framework
-- BeagleBone.org for comprehensive hardware documentation
-- OpenCV project for computer vision capabilities
+-   Yocto Project community for the excellent embedded Linux framework
+-   BeagleBone.org for comprehensive hardware documentation
+-   OpenCV project for computer vision capabilities
 
 ## Support
 
 For questions and support:
 
-- Create an issue in the GitHub repository
-- Check the [troubleshooting guide](docs/troubleshooting.md)
-- Review the [hardware setup documentation](docs/hardware-setup.md)
+-   Create an issue in the GitHub repository
+-   Check the [troubleshooting guide](docs/troubleshooting.md)
+-   Review the [hardware setup documentation](docs/hardware-setup.md)
 
 ---
 

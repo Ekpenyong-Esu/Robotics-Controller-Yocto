@@ -1,2 +1,0 @@
-/usr/bin/ar qc libline_sensor_array.a CMakeFiles/line_sensor_array.dir/line_sensor_array.cpp.o
-/usr/bin/ranlib libline_sensor_array.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmotor_controller.a CMakeFiles/motor_controller.dir/motor_controller.cpp.o
-/usr/bin/ranlib libmotor_controller.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libsystem_manager.a CMakeFiles/system_manager.dir/system_manager.cpp.o
-/usr/bin/ranlib libsystem_manager.a

@@ -1,370 +1,245 @@
 #!/bin/bash
+# Simplified Layer Management Script for Robotics Controller
+# Author: Siddhant Jajoo
+# Description: Manage Yocto meta-layers
 
-# Layer management script for Robotics Controller Yocto project
-# Usage: ./scripts/manage-layers.sh [command] [options]
+set -e
 
-SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-PROJECT_DIR=$(dirname "$SCRIPT_DIR")
+# Configuration
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD_DIR="${PROJECT_ROOT}/build"
 
-# Set color codes
-GREEN='\033[0;32m'
+# Colors for output
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to show usage
-show_usage() {
-    echo -e "${BLUE}Layer Management Script for Robotics Controller${NC}"
-    echo
-    echo "Usage: $0 [command] [options]"
-    echo
-    echo -e "${YELLOW}Commands:${NC}"
-    echo "  list                    - List all currently configured layers"
-    echo "  available              - Show popular available meta-layers"
-    echo "  add <name> <url> [branch] - Add a new meta-layer"
-    echo "  remove <name>          - Remove a meta-layer"
-    echo "  update <name>          - Update a meta-layer to latest commit"
-    echo "  info <name>            - Show information about a layer"
-    echo "  help                   - Show this help message"
-    echo
-    echo -e "${YELLOW}Examples:${NC}"
-    echo "  $0 add meta-golang https://github.com/bmwcarit/meta-golang"
-    echo "  $0 add meta-ros https://github.com/ros/meta-ros scarthgap"
-    echo "  $0 remove meta-golang"
-    echo "  $0 update meta-raspberrypi"
-    echo "  $0 list"
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-# Function to add a layer to bblayers.conf
-add_layer_to_bblayers() {
-    local layer_name="$1"
-    local layer_path="$2"
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
 
-    if [ -f "$PROJECT_DIR/build/conf/bblayers.conf" ]; then
-        if ! grep -q "$layer_name" "$PROJECT_DIR/build/conf/bblayers.conf"; then
-            echo -e "${BLUE}Adding $layer_name to bblayers.conf...${NC}"
-            # Create backup
-            cp "$PROJECT_DIR/build/conf/bblayers.conf" "$PROJECT_DIR/build/conf/bblayers.conf.bak"
-            # Insert before the last line with meta-robotics
-            sed -i "/meta-robotics/i\\  $layer_path \\\\" "$PROJECT_DIR/build/conf/bblayers.conf"
-            echo -e "${GREEN}$layer_name added to bblayers.conf${NC}"
-        else
-            echo -e "${YELLOW}$layer_name already in bblayers.conf${NC}"
-        fi
-    else
-        echo -e "${RED}bblayers.conf not found. Make sure you've run setup-yocto-env.sh first.${NC}"
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+# Help function
+show_help() {
+    cat << EOF
+Usage: $0 [COMMAND] [OPTIONS]
+
+Manage Yocto meta-layers for Robotics Controller project
+
+COMMANDS:
+    list                      List currently configured layers
+    add <name> <url>          Add a new meta-layer
+    remove <name>             Remove a meta-layer
+    
+OPTIONS:
+    -h, --help               Show this help message
+
+EXAMPLES:
+    $0 list                                                    # List all layers
+    $0 add meta-ros https://github.com/ros/meta-ros           # Add ROS layer
+    $0 remove meta-ros                                        # Remove ROS layer
+
+EOF
+}
+
+# Check build environment
+check_build_environment() {
+    if [ ! -f "$BUILD_DIR/conf/bblayers.conf" ]; then
+        log_error "Build environment not found"
+        log_info "Please run: ./scripts/build.sh"
         exit 1
     fi
 }
 
-# Function to remove a layer from bblayers.conf
-remove_layer_from_bblayers() {
-    local layer_name="$1"
-
-    if [ -f "$PROJECT_DIR/build/conf/bblayers.conf" ]; then
-        if grep -q "$layer_name" "$PROJECT_DIR/build/conf/bblayers.conf"; then
-            echo -e "${BLUE}Removing $layer_name from bblayers.conf...${NC}"
-            # Create backup
-            cp "$PROJECT_DIR/build/conf/bblayers.conf" "$PROJECT_DIR/build/conf/bblayers.conf.bak"
-            # Remove the layer line
-            sed -i "/$layer_name/d" "$PROJECT_DIR/build/conf/bblayers.conf"
-            echo -e "${GREEN}$layer_name removed from bblayers.conf${NC}"
-        else
-            echo -e "${YELLOW}$layer_name not found in bblayers.conf${NC}"
-        fi
-    fi
-}
-
-# Function to list current layers
+# List configured layers
 list_layers() {
-    echo -e "${BLUE}Currently configured meta-layers:${NC}"
-    echo
-
-    if [ -f "$PROJECT_DIR/build/conf/bblayers.conf" ]; then
-        echo -e "${YELLOW}From bblayers.conf:${NC}"
-        grep -E "meta-|poky" "$PROJECT_DIR/build/conf/bblayers.conf" | sed 's/.*\///' | sed 's/ .*//' | sort | while read -r layer; do
-            if [ -n "$layer" ]; then
-                if [ -d "$PROJECT_DIR/$layer" ]; then
-                    echo -e "  ${GREEN}✓${NC} $layer (cloned)"
-                else
-                    echo -e "  ${RED}✗${NC} $layer (not cloned)"
-                fi
+    echo "=========================================="
+    echo "Currently Configured Meta-Layers"
+    echo "=========================================="
+    
+    check_build_environment
+    
+    log_info "Layers in bblayers.conf:"
+    grep -E "meta-|poky" "$BUILD_DIR/conf/bblayers.conf" | while read -r line; do
+        local layer
+        layer=$(basename "$(echo "$line" | sed 's/.*\///' | sed 's/ .*//' | sed 's/\\\///')")
+        if [ -n "$layer" ] && [ "$layer" != "BBLAYERS" ]; then
+            if [ -d "$PROJECT_ROOT/$layer" ]; then
+                echo -e "  ${GREEN}✓${NC} $layer"
+            else
+                echo -e "  ${RED}✗${NC} $layer (missing)"
             fi
-        done
-        echo
-    else
-        echo -e "${RED}bblayers.conf not found. Run setup-yocto-env.sh first.${NC}"
-        exit 1
-    fi
-
-    echo -e "${YELLOW}Available in project root:${NC}"
-    find "$PROJECT_DIR" -maxdepth 1 -name "meta-*" -type d | while read -r dir; do
-        layer_name=$(basename "$dir")
-        if grep -q "$layer_name" "$PROJECT_DIR/build/conf/bblayers.conf" 2>/dev/null; then
-            echo -e "  ${GREEN}✓${NC} $layer_name (active)"
-        else
-            echo -e "  ${YELLOW}○${NC} $layer_name (available but not active)"
         fi
     done
 }
 
-# Function to show available layers
-show_available_layers() {
-    echo -e "${BLUE}Popular meta-layers for embedded/robotics development:${NC}"
-    echo
-    echo -e "${YELLOW}Hardware BSP Layers:${NC}"
-    echo "  meta-ti               - git://git.yoctoproject.org/meta-ti"
-    echo "  meta-raspberrypi      - git://git.yoctoproject.org/meta-raspberrypi"
-    echo "  meta-intel            - git://git.yoctoproject.org/meta-intel"
-    echo "  meta-xilinx           - https://github.com/Xilinx/meta-xilinx"
-    echo
-    echo -e "${YELLOW}Real-time and Performance:${NC}"
-    echo "  meta-realtime         - git://git.yoctoproject.org/meta-realtime"
-    echo "  meta-latency-testing  - https://github.com/derekstraka/meta-latency-testing"
-    echo
-    echo -e "${YELLOW}Security:${NC}"
-    echo "  meta-security         - git://git.yoctoproject.org/meta-security"
-    echo "  meta-tpm              - https://github.com/kraj/meta-tpm"
-    echo "  meta-selinux          - git://git.yoctoproject.org/meta-selinux"
-    echo
-    echo -e "${YELLOW}Connectivity and IoT:${NC}"
-    echo "  meta-networking       - git://git.openembedded.org/meta-networking"
-    echo "  meta-bluetooth        - https://github.com/fhunleth/meta-bluetooth"
-    echo "  meta-iot              - https://github.com/intel-iot-devkit/meta-iot"
-    echo
-    echo -e "${YELLOW}Development and Languages:${NC}"
-    echo "  meta-nodejs           - https://github.com/imyller/meta-nodejs"
-    echo "  meta-python           - git://git.openembedded.org/meta-python"
-    echo "  meta-rust             - https://github.com/meta-rust/meta-rust"
-    echo "  meta-golang           - https://github.com/bmwcarit/meta-golang"
-    echo "  meta-java             - https://github.com/openjdk/meta-openjdk"
-    echo
-    echo -e "${YELLOW}Robotics and AI:${NC}"
-    echo "  meta-ros              - https://github.com/ros/meta-ros"
-    echo "  meta-tensorflow-lite  - https://github.com/NobuoTsukamoto/meta-tensorflow-lite"
-    echo "  meta-opencv           - https://github.com/robwoolley/meta-opencv"
-    echo
-    echo -e "${YELLOW}Multimedia and Graphics:${NC}"
-    echo "  meta-multimedia       - git://git.openembedded.org/meta-multimedia"
-    echo "  meta-qt5              - git://code.qt.io/yocto/meta-qt5"
-    echo "  meta-gnome            - git://git.yoctoproject.org/meta-gnome"
-    echo
-    echo -e "${YELLOW}Virtualization and Containers:${NC}"
-    echo "  meta-virtualization   - git://git.yoctoproject.org/meta-virtualization"
-    echo "  meta-cloud-services   - git://git.yoctoproject.org/meta-cloud-services"
-    echo
-    echo -e "${BLUE}To add a layer, use:${NC} $0 add <layer-name> <git-url> [branch]"
-}
-
-# Function to add a new meta-layer
-add_layer() {
-    if [ $# -lt 2 ]; then
-        echo -e "${RED}Error: Missing arguments${NC}"
-        echo "Usage: $0 add <layer-name> <git-url> [branch]"
-        echo "Example: $0 add meta-golang https://github.com/bmwcarit/meta-golang scarthgap"
-        exit 1
-    fi
-
-    local layer_name="$1"
-    local git_url="$2"
-    local branch="${3:-scarthgap}"
-    local layer_path="$PROJECT_DIR/$layer_name"
-
-    echo -e "${BLUE}Adding new meta-layer: $layer_name${NC}"
-
-    # Clone the layer if it doesn't exist
-    if [ ! -d "$layer_path" ]; then
-        echo -e "${BLUE}Cloning $layer_name from $git_url (branch: $branch)...${NC}"
-        if git clone "$git_url" -b "$branch" "$layer_path"; then
-            echo -e "${GREEN}$layer_name cloned successfully!${NC}"
-        else
-            echo -e "${RED}Failed to clone $layer_name${NC}"
-            echo -e "${YELLOW}Trying with master branch...${NC}"
-            if git clone "$git_url" "$layer_path"; then
-                echo -e "${GREEN}$layer_name cloned successfully with default branch!${NC}"
-            else
-                echo -e "${RED}Failed to clone $layer_name with any branch${NC}"
+# Validate layer arguments
+validate_layer_args() {
+    local command="$1"
+    local layer_name="$2"
+    local git_url="$3"
+    
+    case "$command" in
+        add)
+            if [ $# -lt 3 ]; then
+                log_error "Usage: $0 add <layer-name> <git-url>"
                 exit 1
             fi
-        fi
-    else
-        echo -e "${YELLOW}$layer_name already exists at $layer_path${NC}"
-    fi
-
-    # Add to bblayers.conf
-    add_layer_to_bblayers "$layer_name" "\${TOPDIR}/../$layer_name"
-
-    echo -e "${GREEN}$layer_name has been added to your Yocto build!${NC}"
-    echo -e "${YELLOW}Note: You may need to check layer dependencies and update local.conf if needed.${NC}"
+            ;;
+        remove)
+            if [ $# -lt 2 ]; then
+                log_error "Usage: $0 remove <layer-name>"
+                exit 1
+            fi
+            ;;
+    esac
 }
 
-# Function to remove a meta-layer
-remove_layer() {
-    if [ $# -lt 1 ]; then
-        echo -e "${RED}Error: Missing layer name${NC}"
-        echo "Usage: $0 remove <layer-name>"
-        exit 1
-    fi
-
+# Clone layer repository
+clone_layer() {
     local layer_name="$1"
-    local layer_path="$PROJECT_DIR/$layer_name"
+    local git_url="$2"
+    local layer_path="$PROJECT_ROOT/$layer_name"
+    
+    if [ ! -d "$layer_path" ]; then
+        log_info "Cloning $layer_name from $git_url..."
+        if git clone "$git_url" "$layer_path"; then
+            log_success "Layer cloned successfully"
+        else
+            log_error "Failed to clone layer"
+            exit 1
+        fi
+    else
+        log_warn "Layer directory already exists: $layer_path"
+    fi
+}
 
-    echo -e "${BLUE}Removing meta-layer: $layer_name${NC}"
+# Add layer to bblayers.conf
+add_to_bblayers() {
+    local layer_name="$1"
+    
+    if ! grep -q "$layer_name" "$BUILD_DIR/conf/bblayers.conf"; then
+        log_info "Adding layer to bblayers.conf..."
+        # Create backup
+        cp "$BUILD_DIR/conf/bblayers.conf" "$BUILD_DIR/conf/bblayers.conf.bak"
+        # Add before the closing quote
+        sed -i '/"/i\  ${TOPDIR}/../'"$layer_name"' \\' "$BUILD_DIR/conf/bblayers.conf"
+        log_success "Layer added to build configuration"
+    else
+        log_warn "Layer already in bblayers.conf"
+    fi
+}
 
-    # Remove from bblayers.conf
-    remove_layer_from_bblayers "$layer_name"
+# Add a new layer
+add_layer() {
+    local layer_name="$1"
+    local git_url="$2"
+    
+    echo "=========================================="
+    echo "Adding Meta-Layer: $layer_name"
+    echo "=========================================="
+    
+    check_build_environment
+    clone_layer "$layer_name" "$git_url"
+    add_to_bblayers "$layer_name"
+    
+    log_success "Layer $layer_name added successfully"
+}
 
-    # Ask if user wants to delete the directory
+# Remove layer from bblayers.conf
+remove_from_bblayers() {
+    local layer_name="$1"
+    
+    if grep -q "$layer_name" "$BUILD_DIR/conf/bblayers.conf"; then
+        log_info "Removing layer from bblayers.conf..."
+        cp "$BUILD_DIR/conf/bblayers.conf" "$BUILD_DIR/conf/bblayers.conf.bak"
+        sed -i "/$layer_name/d" "$BUILD_DIR/conf/bblayers.conf"
+        log_success "Layer removed from build configuration"
+    else
+        log_warn "Layer not found in bblayers.conf"
+    fi
+}
+
+# Remove layer directory
+remove_layer_directory() {
+    local layer_name="$1"
+    local layer_path="$PROJECT_ROOT/$layer_name"
+    
     if [ -d "$layer_path" ]; then
-        echo -e "${YELLOW}Do you want to delete the layer directory? This will remove all local changes.${NC}"
+        echo -e "${YELLOW}Remove layer directory? This will delete all files!${NC}"
         read -p "Delete $layer_path? [y/N] " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -rf "$layer_path"
-            echo -e "${GREEN}$layer_name directory deleted${NC}"
+            log_success "Layer directory removed"
         else
-            echo -e "${YELLOW}$layer_name directory kept${NC}"
+            log_info "Layer directory kept"
         fi
     fi
-
-    echo -e "${GREEN}$layer_name has been removed from your Yocto build!${NC}"
 }
 
-# Function to update a meta-layer
-update_layer() {
-    if [ $# -lt 1 ]; then
-        echo -e "${RED}Error: Missing layer name${NC}"
-        echo "Usage: $0 update <layer-name>"
-        exit 1
-    fi
-
+# Remove a layer
+remove_layer() {
     local layer_name="$1"
-    local layer_path="$PROJECT_DIR/$layer_name"
-
-    if [ ! -d "$layer_path" ]; then
-        echo -e "${RED}Error: $layer_name not found at $layer_path${NC}"
-        exit 1
-    fi
-
-    echo -e "${BLUE}Updating meta-layer: $layer_name${NC}"
-
-    cd "$layer_path" || exit 1
-
-    # Check if it's a git repository
-    if [ ! -d ".git" ]; then
-        echo -e "${RED}Error: $layer_name is not a git repository${NC}"
-        exit 1
-    fi
-
-    # Get current branch
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
-    echo -e "${BLUE}Current branch: $current_branch${NC}"
-
-    # Update the layer
-    if git pull; then
-        echo -e "${GREEN}$layer_name updated successfully!${NC}"
-    else
-        echo -e "${RED}Failed to update $layer_name${NC}"
-        exit 1
-    fi
+    
+    echo "=========================================="
+    echo "Removing Meta-Layer: $layer_name"
+    echo "=========================================="
+    
+    check_build_environment
+    remove_from_bblayers "$layer_name"
+    remove_layer_directory "$layer_name"
+    
+    log_success "Layer $layer_name removed"
 }
 
-# Function to show layer information
-show_layer_info() {
-    if [ $# -lt 1 ]; then
-        echo -e "${RED}Error: Missing layer name${NC}"
-        echo "Usage: $0 info <layer-name>"
-        exit 1
+# Main function
+main() {
+     # Parse arguments
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        show_help
+        exit 0
     fi
 
-    local layer_name="$1"
-    local layer_path="$PROJECT_DIR/$layer_name"
-
-    if [ ! -d "$layer_path" ]; then
-        echo -e "${RED}Error: $layer_name not found at $layer_path${NC}"
-        exit 1
-    fi
-
-    echo -e "${BLUE}Layer Information: $layer_name${NC}"
-    echo
-
-    # Show layer.conf if it exists
-    if [ -f "$layer_path/conf/layer.conf" ]; then
-        echo -e "${YELLOW}Layer Configuration:${NC}"
-        echo "  Path: $layer_path"
-        echo "  Priority: $(grep BBFILE_PRIORITY "$layer_path/conf/layer.conf" 2>/dev/null || echo "Not specified")"
-        echo "  Dependencies: $(grep LAYERDEPENDS "$layer_path/conf/layer.conf" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "None specified")"
-        echo "  Series Compatibility: $(grep LAYERSERIES_COMPAT "$layer_path/conf/layer.conf" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "Not specified")"
-        echo
-    fi
-
-    # Show git information if it's a git repository
-    if [ -d "$layer_path/.git" ]; then
-        cd "$layer_path" || exit 1
-        echo -e "${YELLOW}Git Information:${NC}"
-        echo "  Branch: $(git rev-parse --abbrev-ref HEAD)"
-        echo "  Commit: $(git rev-parse --short HEAD)"
-        echo "  Remote: $(git remote get-url origin 2>/dev/null || echo "No remote")"
-        echo "  Last commit: $(git log -1 --format="%cd" --date=short)"
-        echo
-    fi
-
-    # Show recipes count
-    recipe_dirs=$(find "$layer_path" -maxdepth 1 -name "recipes-*" -type d 2>/dev/null)
-    if [ -n "$recipe_dirs" ]; then
-        echo -e "${YELLOW}Recipes:${NC}"
-        recipe_count=$(find "$layer_path" -name "*.bb" -o -name "*.bbappend" | wc -l)
-        echo "  Total recipes: $recipe_count"
-        echo "  Recipe directories:"
-        echo "$recipe_dirs" | while read -r dir; do
-            echo "    $(basename "$dir")"
-        done
-        echo
-    fi
-
-    # Show README if it exists
-    if [ -f "$layer_path/README" ] || [ -f "$layer_path/README.md" ]; then
-        echo -e "${YELLOW}README (first 10 lines):${NC}"
-        head -n 10 "$layer_path/README"* 2>/dev/null | head -n 10
-        echo
-    fi
+    
+    case "$1" in
+        list)
+            list_layers
+            ;;
+        add)
+            shift
+            validate_layer_args "add" "$@"
+            add_layer "$@"
+            ;;
+        remove)
+            shift
+            validate_layer_args "remove" "$@"
+            remove_layer "$@"
+            ;;
+        -h|--help|help|"")
+            show_help
+            ;;
+        *)
+            log_error "Unknown command: $1"
+            show_help
+            exit 1
+            ;;
+    esac
 }
 
-# Main script logic
-case "$1" in
-    list)
-        list_layers
-        ;;
-    available)
-        show_available_layers
-        ;;
-    add)
-        shift
-        add_layer "$@"
-        ;;
-    remove)
-        shift
-        remove_layer "$@"
-        ;;
-    update)
-        shift
-        update_layer "$@"
-        ;;
-    info)
-        shift
-        show_layer_info "$@"
-        ;;
-    help|--help|-h)
-        show_usage
-        ;;
-    "")
-        show_usage
-        ;;
-    *)
-        echo -e "${RED}Error: Unknown command '$1'${NC}"
-        echo
-        show_usage
-        exit 1
-        ;;
-esac
+# Run main function
+main "$@"

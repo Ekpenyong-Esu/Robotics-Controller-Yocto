@@ -1,2 +1,0 @@
-/usr/bin/ar qc libgps_sensor.a CMakeFiles/gps_sensor.dir/gps_sensor.cpp.o
-/usr/bin/ranlib libgps_sensor.a

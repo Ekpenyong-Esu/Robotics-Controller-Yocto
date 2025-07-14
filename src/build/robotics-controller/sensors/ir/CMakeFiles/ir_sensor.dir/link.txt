@@ -1,2 +1,0 @@
-/usr/bin/ar qc libir_sensor.a CMakeFiles/ir_sensor.dir/ir_sensor.cpp.o
-/usr/bin/ranlib libir_sensor.a

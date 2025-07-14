@@ -3,61 +3,43 @@ DESCRIPTION = "Development image for robotics controller with debugging tools an
 LICENSE = "MIT"
 
 # Base robotics image
+
+# Robotics Controller Development Image
+# Extends the production image with development and debugging tools
+
+SUMMARY = "Robotics Controller Development Image"
+DESCRIPTION = "Development image for robotics controller with debugging tools and development utilities."
+LICENSE = "MIT"
+
+# Inherit base robotics production image
 require robotics-controller-image.bb
 
-# Override image name for development variant
+# Set image name for development variant
 IMAGE_BASENAME = "robotics-controller-dev"
 
-# =================================================================
-# DEVELOPMENT TOOLS
-# =================================================================
-IMAGE_INSTALL:append = " \
-    git \
-    vim \
-    nano \
-    bash \
-"
+# Add development tools
+IMAGE_INSTALL:append = " git vim nano bash "
 
-# =================================================================
-# DEBUGGING AND TROUBLESHOOTING TOOLS
-# =================================================================
-IMAGE_INSTALL:append = " \
-    strace \
-    gdb \
-    valgrind \
-    perf \
-"
+# Add debugging and troubleshooting tools
+IMAGE_INSTALL:append = " strace gdb valgrind perf "
 
-# Add development image features (including debug access)
-IMAGE_FEATURES:append = " \
-    tools-debug \
-    debug-tweaks \
-    allow-empty-password \
-    allow-root-login \
-"
+# Enable debug features and relaxed security for development
+IMAGE_FEATURES:append = " tools-debug debug-tweaks allow-empty-password allow-root-login "
 
-# Extra rootfs space for development
+# Extra rootfs space for development (256MB)
 IMAGE_ROOTFS_EXTRA_SPACE = "262144"
 
-# =================================================================
-# DEVELOPMENT ENVIRONMENT SETUP
-# =================================================================
+# Postprocess: Set up development environment and documentation
 dev_env_setup() {
-    # Create directory structure
+    # Create profile script for development environment
     install -d ${IMAGE_ROOTFS}/etc/profile.d
-    install -d ${IMAGE_ROOTFS}/opt/robotics-dev
-
-    # Create development environment script
     cat > ${IMAGE_ROOTFS}/etc/profile.d/dev-env.sh << 'EOF'
 #!/bin/sh
-# Development environment for robotics controller
+# Robotics Controller Development Environment
 export ROBOTICS_ENV="development"
 export ROBOTICS_PLATFORM="embedded"
-
-# Application paths
 export ROBOTICS_CONTROLLER_WEB="/usr/share/robotics-controller/www"
 export ROBOTICS_CONTROLLER_CONFIG="/etc/robotics-controller/robotics-controller.conf"
-
 echo "Robotics Controller Development Environment"
 echo "Web interface: $ROBOTICS_CONTROLLER_WEB"
 echo "Configuration: $ROBOTICS_CONTROLLER_CONFIG"
@@ -65,6 +47,7 @@ EOF
     chmod 755 ${IMAGE_ROOTFS}/etc/profile.d/dev-env.sh
 
     # Create development README
+    install -d ${IMAGE_ROOTFS}/opt/robotics-dev
     cat > ${IMAGE_ROOTFS}/opt/robotics-dev/README.txt << 'EOF'
 Robotics Controller Development Environment
 ==========================================
@@ -88,3 +71,4 @@ EOF
 }
 
 ROOTFS_POSTPROCESS_COMMAND += "dev_env_setup; "
+- Web interface: /usr/share/robotics-controller/www/

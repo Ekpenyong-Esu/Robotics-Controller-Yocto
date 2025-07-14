@@ -1,39 +1,30 @@
+"Minimal testing environment without hardware-specific dependencies."
+
+# Robotics Controller QEMU Testing Image
+# Minimal QEMU-compatible image for web interface and controller testing
+
 SUMMARY = "Robotics Controller QEMU Testing Image"
-DESCRIPTION = "QEMU-compatible image for testing the robotics controller web interface. \
-Minimal testing environment without hardware-specific dependencies."
+DESCRIPTION = "QEMU-compatible image for testing the robotics controller web interface. Minimal testing environment without hardware-specific dependencies."
 LICENSE = "MIT"
 
+# Inherit production robotics image
 require robotics-controller-image.bb
 
+# Set image name for QEMU variant
 IMAGE_BASENAME = "robotics-qemu-image"
 
-EXTRA_IMAGE_FEATURES += "debug-tweaks"
+# Enable root login for QEMU testing
+IMAGE_FEATURES:append = " allow-root-login "
 
-# Add QEMU-specific packages for testing
-IMAGE_INSTALL:append = " \
-    packagegroup-core-ssh-openssh \
-    bash \
-    openssh \
-    python3-json \
-"
 
-# Remove hardware-specific packages not available in QEMU
-IMAGE_INSTALL:remove = " \
-"
+# QEMU-specific and essential packages
+IMAGE_INSTALL:append = " packagegroup-core-ssh-openssh bash openssh python3-json util-linux shadow "
 
-IMAGE_FEATURES:append = " \
-    tools-debug \
-    tools-profile \
-    package-management \
-    allow-root-login \
-    empty-root-password \
-    debug-tweaks \
-"
+# Enable debug and development features
+IMAGE_FEATURES:append = " tools-debug debug-tweaks allow-empty-password allow-root-login "
 
-# Explicitly set root password to empty (no password)
-EXTRA_USERS_PARAMS = "usermod -P '' root;"
-
-IMAGE_ROOTFS_EXTRA_SPACE = "131072"
+# Reserve extra space for user applications (512MB)
+IMAGE_ROOTFS_EXTRA_SPACE = "524288"  
 
 qemu_env_setup() {
     install -d ${IMAGE_ROOTFS}/etc/profile.d
@@ -53,7 +44,7 @@ echo "- Test web interface: python3 -m http.server 8080 -d $ROBOTICS_CONTROLLER_
 echo ""
 echo "Login Information:"
 echo "- Username: root"
-echo "- Password: (just press Enter)"
+echo "- Password: root"
 EOF
     chmod 755 ${IMAGE_ROOTFS}/etc/profile.d/qemu-env.sh
 
@@ -96,7 +87,7 @@ echo "QEMU Config: /etc/robotics-controller/qemu.conf"
 echo ""
 echo "Login Information:"
 echo "  Username: root"
-echo "  Password: (just press Enter)"
+echo "  Password: root"
 echo ""
 echo "Service Commands:"
 echo "  systemctl start robotics-controller"
@@ -116,7 +107,7 @@ QEMU Robotics Development Environment
 ====================================
 Login Information:
 - Username: root
-- Password: (just press Enter)
+- Password: root
 
 Main Application:
 - Binary: /usr/bin/robotics-controller
@@ -144,7 +135,7 @@ Testing:
 4. Access web: http://localhost:8080 (if port forwarded)
 
 Troubleshooting Login Issues:
-- Try username 'root' and just press Enter (no password)
+- Use username 'root' and password 'root'
 - If that fails, check console output for errors
 - Check if SSH is running: systemctl status ssh
 - For serial console: Use QEMU monitor console

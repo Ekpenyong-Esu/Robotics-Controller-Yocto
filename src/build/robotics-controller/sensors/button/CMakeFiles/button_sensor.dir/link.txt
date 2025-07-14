@@ -1,2 +1,0 @@
-/usr/bin/ar qc libbutton_sensor.a CMakeFiles/button_sensor.dir/button_sensor.cpp.o
-/usr/bin/ranlib libbutton_sensor.a
